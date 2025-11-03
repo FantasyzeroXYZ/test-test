@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单片机网页工具箱 - 嵌入式开发助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #95a5a6;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--primary), #34495e);
+            color: var(--light);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding-bottom: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        /* 头部样式 - 移除固定定位 */
+        header {
+            padding: 1.5rem 0;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            /* 移除了position: sticky和top属性 */
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            margin-bottom: 0.8rem;
+        }
+        
+        .logo-icon {
+            font-size: 2rem;
+            color: var(--accent);
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .tagline {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+        
+        /* 导航样式 - 移动端优化 */
+        nav {
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 5px;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            justify-content: flex-start;
+            flex-wrap: nowrap;
+            gap: 0.5rem;
+            list-style: none;
+            padding: 0 5px;
+            min-width: max-content;
+        }
+        
+        .nav-tab {
+            padding: 0.7rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+        
+        .nav-tab:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+        
+        .nav-tab.active {
+            background: var(--accent);
+            box-shadow: 0 4px 10px rgba(231, 76, 60, 0.4);
+        }
+        
+        /* 主内容区样式 */
+        .main-content {
+            padding: 1.5rem 0;
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 工具卡片样式 */
+        .tool-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.2rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin-bottom: 1.5rem;
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .tool-title {
+            font-size: 1.3rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent);
+        }
+        
+        .tool-description {
+            margin-bottom: 1.2rem;
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+        
+        /* 字符取模样式 - 移动端优化 */
+        .font-matrix-controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        label {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        input, select, textarea {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            font-size: 1rem;
+            width: 100%;
+        }
+        
+        input::placeholder, textarea::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        .btn:hover {
+            background: #ff6b5b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(231, 76, 60, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+        }
+        
+        .btn-secondary:hover {
+            background: #5dade2;
+        }
+        
+        .matrix-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 1.5rem 0;
+        }
+        
+        .matrix-preview {
+            margin-bottom: 1.5rem;
+            width: 100%;
+            overflow-x: auto;
+        }
+        
+        .matrix-grid {
+            display: inline-grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 2px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin: 0 auto;
+        }
+        
+        .pixel {
+            width: 24px;
+            height: 24px;
+            background: #2c3e50;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        
+        .pixel.active {
+            background: var(--accent);
+        }
+        
+        .matrix-code {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            min-height: 120px;
+            font-size: 0.9rem;
+        }
+        
+        /* 进制转换样式 - 移动端优化 */
+        .converter-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .converter-box {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1.2rem;
+        }
+        
+        .converter-title {
+            font-size: 1.1rem;
+            margin-bottom: 0.8rem;
+            color: var(--secondary);
+        }
+        
+        .converter-result {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-top: 0.8rem;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* 引脚配置样式 - 移动端优化 */
+        .pin-config-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.2rem;
+        }
+        
+        .pin-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.8rem;
+        }
+        
+        .pin-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .pin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .pin-name {
+            font-weight: bold;
+            color: var(--secondary);
+            font-size: 0.95rem;
+        }
+        
+        .pin-number {
+            background: var(--accent);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+        
+        .pin-functions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+        
+        .pin-function {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .pin-function:hover {
+            background: var(--secondary);
+        }
+        
+        .pin-function.active {
+            background: var(--accent);
+        }
+        
+        .code-output {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1.2rem;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            min-height: 180px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        /* 延时计算样式 - 移动端优化 */
+        .delay-controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .delay-result {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.2rem;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+        
+        .delay-code {
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        /* 页脚样式 */
+        footer {
+            text-align: center;
+            padding: 1.5rem 0;
+            margin-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.2rem;
+            margin: 1.2rem 0;
+        }
+        
+        .social-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .social-link:hover {
+            background: var(--accent);
+            transform: translateY(-3px);
+        }
+        
+        /* 移动端特定优化 */
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 10px;
+            }
+            
+            header {
+                padding: 1rem 0;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .tagline {
+                font-size: 0.85rem;
+            }
+            
+            .nav-tab {
+                padding: 0.6rem 0.8rem;
+                font-size: 0.85rem;
+            }
+            
+            .tool-card {
+                padding: 1rem;
+            }
+            
+            .tool-title {
+                font-size: 1.2rem;
+            }
+            
+            .pin-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .pixel {
+                width: 20px;
+                height: 20px;
+            }
+            
+            .converter-result {
+                font-size: 1.1rem;
+            }
+        }
+        
+        /* 平板电脑优化 */
+        @media (min-width: 768px) {
+            .font-matrix-controls {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .converter-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .pin-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .delay-controls {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .btn {
+                width: auto;
+                display: inline-flex;
+            }
+        }
+        
+        /* 桌面端优化 */
+        @media (min-width: 1024px) {
+            .font-matrix-controls {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .converter-container {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .pin-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .delay-controls {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .nav-tabs {
+                justify-content: center;
+            }
+        }
+        
+        /* 防止长按出现复制菜单 */
+        .btn, .nav-tab, .pin-function {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* 提高触摸区域 */
+        .pixel {
+            min-width: 24px;
+            min-height: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-microchip logo-icon"></i>
+                <h1>单片机网页工具箱</h1>
+            </div>
+            <p class="tagline">嵌入式开发者的全能助手 - 字符取模、进制转换、引脚配置等实用工具</p>
+            
+            <nav>
+                <ul class="nav-tabs">
+                    <li class="nav-tab active" data-tab="home">
+                        <i class="fas fa-home"></i>
+                        <span>首页</span>
+                    </li>
+                    <li class="nav-tab" data-tab="font-matrix">
+                        <i class="fas fa-font"></i>
+                        <span>字符取模</span>
+                    </li>
+                    <li class="nav-tab" data-tab="converter">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>进制转换</span>
+                    </li>
+                    <li class="nav-tab" data-tab="pin-config">
+                        <i class="fas fa-microchip"></i>
+                        <span>引脚配置</span>
+                    </li>
+                    <li class="nav-tab" data-tab="delay-calc">
+                        <i class="fas fa-clock"></i>
+                        <span>延时计算</span>
+                    </li>
+                </ul>
+            </nav>
+        </header>
+        
+        <main class="main-content">
+            <!-- 首页内容 -->
+            <section id="home" class="tab-content active">
+                <h2>欢迎使用单片机网页工具箱</h2>
+                <p>这里汇集了各种单片机开发常用工具，让您的嵌入式开发更加高效便捷！</p>
+                
+                <div class="tool-card">
+                    <h3 class="tool-title"><i class="fas fa-font"></i> 字符取模工具</h3>
+                    <p class="tool-description">为LCD、OLED等显示屏生成字符点阵数据，支持自定义字体大小和取模方式。</p>
+                    <button class="btn" data-tab="font-matrix">
+                        <i class="fas fa-font"></i>
+                        <span>使用字符取模</span>
+                    </button>
+                </div>
+                
+                <div class="tool-card">
+                    <h3 class="tool-title"><i class="fas fa-exchange-alt"></i> 进制转换工具</h3>
+                    <p class="tool-description">快速在十进制、十六进制、二进制之间转换，支持有符号和无符号数。</p>
+                    <button class="btn" data-tab="converter">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>使用进制转换</span>
+                    </button>
+                </div>
+                
+                <div class="tool-card">
+                    <h3 class="tool-title"><i class="fas fa-microchip"></i> 引脚配置工具</h3>
+                    <p class="tool-description">可视化配置单片机引脚功能，自动生成初始化代码。</p>
+                    <button class="btn" data-tab="pin-config">
+                        <i class="fas fa-microchip"></i>
+                        <span>使用引脚配置</span>
+                    </button>
+                </div>
+                
+                <div class="tool-card">
+                    <h3 class="tool-title"><i class="fas fa-clock"></i> 延时计算工具</h3>
+                    <p class="tool-description">根据单片机时钟频率和所需延时时间，生成精确的延时函数代码。</p>
+                    <button class="btn" data-tab="delay-calc">
+                        <i class="fas fa-clock"></i>
+                        <span>使用延时计算</span>
+                    </button>
+                </div>
+                
+                <div class="tool-card">
+                    <h3 class="tool-title"><i class="fas fa-wave-square"></i> 串口通信工具</h3>
+                    <p class="tool-description">计算串口通信参数，生成初始化代码，支持常见波特率。</p>
+                    <button class="btn">
+                        <i class="fas fa-wave-square"></i>
+                        <span>使用串口工具</span>
+                    </button>
+                </div>
+                
+                <div class="tool-card">
+                    <h3 class="tool-title"><i class="fas fa-code"></i> 代码生成工具</h3>
+                    <p class="tool-description">根据配置自动生成常用单片机外设驱动代码，节省开发时间。</p>
+                    <button class="btn">
+                        <i class="fas fa-code"></i>
+                        <span>使用代码生成</span>
+                    </button>
+                </div>
+            </section>
+            
+            <!-- 字符取模内容 -->
+            <section id="font-matrix" class="tab-content">
+                <div class="tool-card">
+                    <h2 class="tool-title"><i class="fas fa-font"></i> 字符取模工具</h2>
+                    <p class="tool-description">为LCD、OLED等显示屏生成字符点阵数据</p>
+                    
+                    <div class="font-matrix-controls">
+                        <div class="control-group">
+                            <label for="char-input">输入字符</label>
+                            <input type="text" id="char-input" maxlength="1" value="A" placeholder="输入单个字符">
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="font-size">字体大小</label>
+                            <select id="font-size">
+                                <option value="8">8x8 点阵</option>
+                                <option value="16" selected>16x16 点阵</option>
+                                <option value="24">24x24 点阵</option>
+                                <option value="32">32x32 点阵</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="font-family">字体</label>
+                            <select id="font-family">
+                                <option value="Arial" selected>Arial</option>
+                                <option value="Courier New">Courier New</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Verdana">Verdana</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="byte-order">字节顺序</label>
+                            <select id="byte-order">
+                                <option value="horizontal" selected>水平取模</option>
+                                <option value="vertical">垂直取模</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <button class="btn" id="generate-matrix">
+                            <i class="fas fa-cog"></i>
+                            <span>生成字模</span>
+                        </button>
+                    </div>
+                    
+                    <div class="matrix-container">
+                        <div class="matrix-preview">
+                            <h3>点阵预览</h3>
+                            <div class="matrix-grid" id="matrix-grid">
+                                <!-- 点阵将通过JavaScript动态生成 -->
+                            </div>
+                        </div>
+                        
+                        <div class="matrix-output">
+                            <h3>字模数据</h3>
+                            <textarea class="matrix-code" id="matrix-code" placeholder="字模数据将显示在这里..." readonly></textarea>
+                        </div>
+                        
+                        <button class="btn btn-secondary" id="copy-matrix">
+                            <i class="fas fa-copy"></i>
+                            <span>复制字模数据</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 进制转换内容 -->
+            <section id="converter" class="tab-content">
+                <div class="tool-card">
+                    <h2 class="tool-title"><i class="fas fa-exchange-alt"></i> 进制转换工具</h2>
+                    <p class="tool-description">在十进制、十六进制、二进制之间快速转换</p>
+                    
+                    <div class="control-group">
+                        <label for="number-input">输入数值</label>
+                        <input type="text" id="number-input" placeholder="输入十进制、十六进制或二进制数">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="number-type">数值类型</label>
+                        <select id="number-type">
+                            <option value="unsigned" selected>无符号整数</option>
+                            <option value="signed">有符号整数</option>
+                            <option value="float">浮点数</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn" id="convert-btn">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>转换</span>
+                    </button>
+                    
+                    <div class="converter-container">
+                        <div class="converter-box">
+                            <h3 class="converter-title">十进制</h3>
+                            <div class="converter-result" id="decimal-result">0</div>
+                        </div>
+                        
+                        <div class="converter-box">
+                            <h3 class="converter-title">十六进制</h3>
+                            <div class="converter-result" id="hex-result">0x00</div>
+                        </div>
+                        
+                        <div class="converter-box">
+                            <h3 class="converter-title">二进制</h3>
+                            <div class="converter-result" id="binary-result">0b00000000</div>
+                        </div>
+                        
+                        <div class="converter-box">
+                            <h3 class="converter-title">八进制</h3>
+                            <div class="converter-result" id="octal-result">0o0</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 引脚配置内容 -->
+            <section id="pin-config" class="tab-content">
+                <div class="tool-card">
+                    <h2 class="tool-title"><i class="fas fa-microchip"></i> 引脚配置工具</h2>
+                    <p class="tool-description">可视化配置单片机引脚功能，自动生成初始化代码</p>
+                    
+                    <div class="control-group">
+                        <label for="mcu-select">选择单片机型号</label>
+                        <select id="mcu-select">
+                            <option value="stc89c52" selected>STC89C52</option>
+                            <option value="stm32f103">STM32F103</option>
+                            <option value="arduino-uno">Arduino Uno</option>
+                            <option value="esp32">ESP32</option>
+                        </select>
+                    </div>
+                    
+                    <div class="pin-config-container">
+                        <div class="pin-grid" id="pin-grid">
+                            <!-- 引脚将通过JavaScript动态生成 -->
+                        </div>
+                        
+                        <div class="code-output-container">
+                            <h3>生成的初始化代码</h3>
+                            <div class="code-output" id="pin-code">
+                                // 引脚配置代码将显示在这里
+                            </div>
+                            <button class="btn btn-secondary" id="copy-pin-code">
+                                <i class="fas fa-copy"></i>
+                                <span>复制代码</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 延时计算内容 -->
+            <section id="delay-calc" class="tab-content">
+                <div class="tool-card">
+                    <h2 class="tool-title"><i class="fas fa-clock"></i> 延时计算工具</h2>
+                    <p class="tool-description">根据单片机时钟频率和所需延时时间，生成精确的延时函数代码</p>
+                    
+                    <div class="delay-controls">
+                        <div class="control-group">
+                            <label for="clock-frequency">时钟频率 (MHz)</label>
+                            <input type="number" id="clock-frequency" value="12" min="1" max="1000" step="0.1">
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="delay-time">延时时间 (ms)</label>
+                            <input type="number" id="delay-time" value="100" min="0.001" max="10000" step="1">
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="mcu-architecture">单片机架构</label>
+                            <select id="mcu-architecture">
+                                <option value="51" selected>51系列</option>
+                                <option value="avr">AVR</option>
+                                <option value="arm">ARM Cortex-M</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" id="calculate-delay">
+                        <i class="fas fa-calculator"></i>
+                        <span>计算延时</span>
+                    </button>
+                    
+                    <div class="delay-result">
+                        <h3>计算结果</h3>
+                        <p>循环次数: <span id="loop-count">0</span></p>
+                        <p>实际延时: <span id="actual-delay">0</span> ms</p>
+                        <p>误差: <span id="delay-error">0</span> %</p>
+                        
+                        <h3 style="margin-top: 1rem;">生成的延时函数</h3>
+                        <div class="delay-code" id="delay-code">
+                            // 延时函数代码将显示在这里
+                        </div>
+                        
+                        <button class="btn btn-secondary" id="copy-delay-code">
+                            <i class="fas fa-copy"></i>
+                            <span>复制代码</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <div class="social-links">
+                <a href="#" class="social-link">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a href="#" class="social-link">
+                    <i class="fab fa-weibo"></i>
+                </a>
+                <a href="#" class="social-link">
+                    <i class="fab fa-weixin"></i>
+                </a>
+                <a href="#" class="social-link">
+                    <i class="fab fa-qq"></i>
+                </a>
+            </div>
+            <p>单片机网页工具箱 &copy; 2025</p>
+        </footer>
+    </div>
+
+    <script>
+        // 标签页切换功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabs = document.querySelectorAll('.nav-tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // 移除所有active类
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // 添加active类到当前标签
+                    tab.classList.add('active');
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // 首页工具按钮点击切换到对应标签
+            document.querySelectorAll('.btn[data-tab]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabId = btn.getAttribute('data-tab');
+                    if (tabId) {
+                        // 移除所有active类
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tabContents.forEach(content => content.classList.remove('active'));
+                        
+                        // 添加active类到目标标签
+                        document.querySelector(`.nav-tab[data-tab="${tabId}"]`).classList.add('active');
+                        document.getElementById(tabId).classList.add('active');
+                    }
+                });
+            });
+            
+            // 字符取模功能
+            const charInput = document.getElementById('char-input');
+            const fontSizeSelect = document.getElementById('font-size');
+            const fontFamilySelect = document.getElementById('font-family');
+            const byteOrderSelect = document.getElementById('byte-order');
+            const generateMatrixBtn = document.getElementById('generate-matrix');
+            const matrixGrid = document.getElementById('matrix-grid');
+            const matrixCode = document.getElementById('matrix-code');
+            const copyMatrixBtn = document.getElementById('copy-matrix');
+            
+            // 初始化点阵网格
+            function initMatrixGrid(size) {
+                matrixGrid.innerHTML = '';
+                matrixGrid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+                
+                for (let i = 0; i < size * size; i++) {
+                    const pixel = document.createElement('div');
+                    pixel.className = 'pixel';
+                    pixel.dataset.index = i;
+                    matrixGrid.appendChild(pixel);
+                }
+            }
+            
+            // 生成字模
+            function generateFontMatrix() {
+                const char = charInput.value || 'A';
+                const size = parseInt(fontSizeSelect.value);
+                const fontFamily = fontFamilySelect.value;
+                const byteOrder = byteOrderSelect.value;
+                
+                // 初始化网格
+                initMatrixGrid(size);
+                
+                // 模拟生成字模数据（实际实现需要使用Canvas）
+                const matrixData = [];
+                for (let i = 0; i < size; i++) {
+                    const row = [];
+                    for (let j = 0; j < size; j++) {
+                        // 模拟随机点阵，实际应根据字符生成
+                        const active = Math.random() > 0.7;
+                        row.push(active ? 1 : 0);
+                        
+                        // 更新网格显示
+                        const index = i * size + j;
+                        const pixel = matrixGrid.querySelector(`.pixel[data-index="${index}"]`);
+                        if (active) {
+                            pixel.classList.add('active');
+                        } else {
+                            pixel.classList.remove('active');
+                        }
+                    }
+                    matrixData.push(row);
+                }
+                
+                // 生成字模代码
+                let code = '';
+                if (byteOrder === 'horizontal') {
+                    // 水平取模
+                    for (let i = 0; i < size; i++) {
+                        let byte = 0;
+                        for (let j = 0; j < size; j++) {
+                            if (matrixData[i][j]) {
+                                byte |= (1 << (size - 1 - j));
+                            }
+                        }
+                        code += `0x${byte.toString(16).padStart(2, '0')}, `;
+                        if ((i + 1) % 8 === 0) code += '\n';
+                    }
+                } else {
+                    // 垂直取模
+                    for (let j = 0; j < size; j++) {
+                        let byte = 0;
+                        for (let i = 0; i < size; i++) {
+                            if (matrixData[i][j]) {
+                                byte |= (1 << (size - 1 - i));
+                            }
+                        }
+                        code += `0x${byte.toString(16).padStart(2, '0')}, `;
+                        if ((j + 1) % 8 === 0) code += '\n';
+                    }
+                }
+                
+                matrixCode.textContent = `// ${size}x${size} 字模数据 - 字符: '${char}'\n${code}`;
+            }
+            
+            // 复制字模数据
+            function copyMatrixCode() {
+                matrixCode.select();
+                document.execCommand('copy');
+                alert('字模数据已复制到剪贴板！');
+            }
+            
+            // 初始化字符取模
+            initMatrixGrid(16);
+            generateFontMatrix();
+            
+            // 事件监听
+            generateMatrixBtn.addEventListener('click', generateFontMatrix);
+            copyMatrixBtn.addEventListener('click', copyMatrixCode);
+            
+            // 进制转换功能
+            const numberInput = document.getElementById('number-input');
+            const numberTypeSelect = document.getElementById('number-type');
+            const convertBtn = document.getElementById('convert-btn');
+            const decimalResult = document.getElementById('decimal-result');
+            const hexResult = document.getElementById('hex-result');
+            const binaryResult = document.getElementById('binary-result');
+            const octalResult = document.getElementById('octal-result');
+            
+            // 进制转换函数
+            function convertNumber() {
+                const input = numberInput.value.trim();
+                const type = numberTypeSelect.value;
+                
+                if (!input) return;
+                
+                let decimalValue;
+                
+                // 解析输入
+                if (input.startsWith('0x') || input.startsWith('0X')) {
+                    // 十六进制
+                    decimalValue = parseInt(input, 16);
+                } else if (input.startsWith('0b') || input.startsWith('0B')) {
+                    // 二进制
+                    decimalValue = parseInt(input.substring(2), 2);
+                } else if (input.startsWith('0o') || input.startsWith('0O')) {
+                    // 八进制
+                    decimalValue = parseInt(input.substring(2), 8);
+                } else {
+                    // 十进制
+                    decimalValue = parseFloat(input);
+                }
+                
+                // 更新显示
+                decimalResult.textContent = decimalValue.toString();
+                hexResult.textContent = '0x' + decimalValue.toString(16).toUpperCase();
+                
+                // 二进制显示（限制为8位）
+                const binaryStr = decimalValue.toString(2);
+                binaryResult.textContent = '0b' + binaryStr.padStart(8, '0');
+                
+                // 八进制显示
+                octalResult.textContent = '0o' + decimalValue.toString(8);
+            }
+            
+            // 事件监听
+            convertBtn.addEventListener('click', convertNumber);
+            numberInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    convertNumber();
+                }
+            });
+            
+            // 引脚配置功能
+            const mcuSelect = document.getElementById('mcu-select');
+            const pinGrid = document.getElementById('pin-grid');
+            const pinCode = document.getElementById('pin-code');
+            const copyPinCodeBtn = document.getElementById('copy-pin-code');
+            
+            // 引脚数据
+            const pinData = {
+                stc89c52: [
+                    { name: 'P0.0', number: 39, functions: ['GPIO', 'AD0'] },
+                    { name: 'P0.1', number: 38, functions: ['GPIO', 'AD1'] },
+                    { name: 'P0.2', number: 37, functions: ['GPIO', 'AD2'] },
+                    { name: 'P0.3', number: 36, functions: ['GPIO', 'AD3'] },
+                    { name: 'P0.4', number: 35, functions: ['GPIO', 'AD4'] },
+                    { name: 'P0.5', number: 34, functions: ['GPIO', 'AD5'] },
+                    { name: 'P0.6', number: 33, functions: ['GPIO', 'AD6'] },
+                    { name: 'P0.7', number: 32, functions: ['GPIO', 'AD7'] },
+                    { name: 'P1.0', number: 1, functions: ['GPIO', 'T2'] },
+                    { name: 'P1.1', number: 2, functions: ['GPIO', 'T2EX'] },
+                    { name: 'P1.2', number: 3, functions: ['GPIO'] },
+                    { name: 'P1.3', number: 4, functions: ['GPIO'] },
+                    { name: 'P1.4', number: 5, functions: ['GPIO'] },
+                    { name: 'P1.5', number: 6, functions: ['GPIO'] },
+                    { name: 'P1.6', number: 7, functions: ['GPIO'] },
+                    { name: 'P1.7', number: 8, functions: ['GPIO'] }
+                ]
+            };
+            
+            // 生成引脚配置
+            function generatePinConfig() {
+                const mcu = mcuSelect.value;
+                const pins = pinData[mcu] || [];
+                
+                pinGrid.innerHTML = '';
+                pins.forEach(pin => {
+                    const pinItem = document.createElement('div');
+                    pinItem.className = 'pin-item';
+                    pinItem.innerHTML = `
+                        <div class="pin-header">
+                            <div class="pin-name">${pin.name}</div>
+                            <div class="pin-number">${pin.number}</div>
+                        </div>
+                        <div class="pin-functions">
+                            ${pin.functions.map(func => 
+                                `<div class="pin-function" data-pin="${pin.name}" data-function="${func}">${func}</div>`
+                            ).join('')}
+                        </div>
+                    `;
+                    pinGrid.appendChild(pinItem);
+                });
+                
+                // 添加事件监听器
+                document.querySelectorAll('.pin-function').forEach(func => {
+                    func.addEventListener('click', function() {
+                        // 切换激活状态
+                        this.classList.toggle('active');
+                        updatePinCode();
+                    });
+                });
+                
+                updatePinCode();
+            }
+            
+            // 更新引脚配置代码
+            function updatePinCode() {
+                const activeFunctions = [];
+                
+                document.querySelectorAll('.pin-function.active').forEach(func => {
+                    const pin = func.getAttribute('data-pin');
+                    const funcName = func.getAttribute('data-function');
+                    activeFunctions.push({ pin, func: funcName });
+                });
+                
+                let code = '// 引脚配置代码\n';
+                code += 'void GPIO_Init(void)\n{\n';
+                
+                activeFunctions.forEach(item => {
+                    if (item.func === 'GPIO') {
+                        code += `    // 配置 ${item.pin} 为GPIO\n`;
+                        code += `    P${item.pin.charAt(1)} = 0x00; // 初始化输出为低电平\n`;
+                    } else if (item.func.startsWith('AD')) {
+                        code += `    // 配置 ${item.pin} 为ADC输入\n`;
+                    } else if (item.func === 'T2') {
+                        code += `    // 配置 ${item.pin} 为定时器2\n`;
+                    }
+                });
+                
+                code += '}';
+                
+                pinCode.textContent = code;
+            }
+            
+            // 复制引脚配置代码
+            function copyPinCode() {
+                const textArea = document.createElement('textarea');
+                textArea.value = pinCode.textContent;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('引脚配置代码已复制到剪贴板！');
+            }
+            
+            // 初始化引脚配置
+            generatePinConfig();
+            
+            // 事件监听
+            mcuSelect.addEventListener('change', generatePinConfig);
+            copyPinCodeBtn.addEventListener('click', copyPinCode);
+            
+            // 延时计算功能
+            const clockFrequency = document.getElementById('clock-frequency');
+            const delayTime = document.getElementById('delay-time');
+            const mcuArchitecture = document.getElementById('mcu-architecture');
+            const calculateDelayBtn = document.getElementById('calculate-delay');
+            const loopCount = document.getElementById('loop-count');
+            const actualDelay = document.getElementById('actual-delay');
+            const delayError = document.getElementById('delay-error');
+            const delayCode = document.getElementById('delay-code');
+            const copyDelayCodeBtn = document.getElementById('copy-delay-code');
+            
+            // 计算延时
+            function calculateDelay() {
+                const freq = parseFloat(clockFrequency.value) * 1e6; // 转换为Hz
+                const time = parseFloat(delayTime.value) / 1000; // 转换为秒
+                const arch = mcuArchitecture.value;
+                
+                // 根据架构计算每条指令的周期数
+                let cyclesPerLoop;
+                switch(arch) {
+                    case '51':
+                        cyclesPerLoop = 12; // 51单片机通常需要12个时钟周期
+                        break;
+                    case 'avr':
+                        cyclesPerLoop = 1; // AVR通常每个循环1个周期
+                        break;
+                    case 'arm':
+                        cyclesPerLoop = 1; // ARM通常每个循环1个周期
+                        break;
+                    default:
+                        cyclesPerLoop = 1;
+                }
+                
+                // 计算需要的循环次数
+                const totalCycles = freq * time;
+                const calculatedLoops = Math.round(totalCycles / cyclesPerLoop);
+                
+                // 计算实际延时和误差
+                const actualTime = (calculatedLoops * cyclesPerLoop) / freq * 1000; // 转换回ms
+                const error = Math.abs((actualTime - parseFloat(delayTime.value)) / parseFloat(delayTime.value) * 100);
+                
+                // 更新显示
+                loopCount.textContent = calculatedLoops.toLocaleString();
+                actualDelay.textContent = actualTime.toFixed(3);
+                delayError.textContent = error.toFixed(2);
+                
+                // 生成延时函数代码
+                let code = '';
+                switch(arch) {
+                    case '51':
+                        code = `void delay_ms(unsigned int ms)\n{\n`;
+                        code += `    unsigned int i, j;\n`;
+                        code += `    for(i=0; i<ms; i++)\n`;
+                        code += `        for(j=0; j<${calculatedLoops}; j++);\n`;
+                        code += `}`;
+                        break;
+                    case 'avr':
+                        code = `void delay_ms(uint16_t ms)\n{\n`;
+                        code += `    for(uint16_t i=0; i<ms; i++)\n`;
+                        code += `        _delay_us(${(1000/calculatedLoops).toFixed(2)});\n`;
+                        code += `}`;
+                        break;
+                    case 'arm':
+                        code = `void delay_ms(uint32_t ms)\n{\n`;
+                        code += `    uint32_t i;\n`;
+                        code += `    for(i=0; i<ms; i++)\n`;
+                        code += `        for(uint32_t j=0; j<${calculatedLoops}; j++);\n`;
+                        code += `}`;
+                        break;
+                }
+                
+                delayCode.textContent = code;
+            }
+            
+            // 复制延时代码
+            function copyDelayCode() {
+                const textArea = document.createElement('textarea');
+                textArea.value = delayCode.textContent;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('延时函数代码已复制到剪贴板！');
+            }
+            
+            // 初始化延时计算
+            calculateDelay();
+            
+            // 事件监听
+            calculateDelayBtn.addEventListener('click', calculateDelay);
+            copyDelayCodeBtn.addEventListener('click', copyDelayCode);
+        });
+    </script>
+</body>
+</html>

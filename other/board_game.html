@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>桌游工具箱 - 您的桌游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        :root {
+            --primary: #4e54c8;
+            --secondary: #8f94fb;
+            --accent: #ff5722;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--light);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding-bottom: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        /* 头部样式 - 移除固定定位 */
+        header {
+            padding: 1.5rem 0;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            /* 移除了position: sticky和top属性 */
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            margin-bottom: 0.8rem;
+        }
+        
+        .logo-icon {
+            font-size: 2rem;
+            color: var(--accent);
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .tagline {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+        
+        /* 导航样式 - 移动端优化 */
+        nav {
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 5px;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            justify-content: flex-start;
+            flex-wrap: nowrap;
+            gap: 0.5rem;
+            list-style: none;
+            padding: 0 5px;
+            min-width: max-content;
+        }
+        
+        .nav-tab {
+            padding: 0.7rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+        
+        .nav-tab:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+        
+        .nav-tab.active {
+            background: var(--accent);
+            box-shadow: 0 4px 10px rgba(255, 87, 34, 0.4);
+        }
+        
+        /* 主内容区样式 */
+        .main-content {
+            padding: 1.5rem 0;
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 工具卡片样式 */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .tool-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.2rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .tool-icon {
+            font-size: 2rem;
+            color: var(--accent);
+            margin-bottom: 0.8rem;
+        }
+        
+        .tool-title {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .tool-description {
+            margin-bottom: 1.2rem;
+            flex-grow: 1;
+            font-size: 0.95rem;
+        }
+        
+        .tool-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+        }
+        
+        .tool-btn:hover {
+            background: #ff7043;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(255, 87, 34, 0.4);
+        }
+        
+        /* 骰子工具样式 */
+        .dice-container {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin: 1.5rem 0;
+        }
+        
+        .dice {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1s ease-out;
+        }
+        
+        .dice-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2), 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .dot {
+            width: 15px;
+            height: 15px;
+            background: #222;
+            border-radius: 50%;
+            position: absolute;
+        }
+        
+        /* 骰子点数布局 */
+        .face-1 .dot:nth-child(1) { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        
+        .face-2 .dot:nth-child(1) { top: 25%; left: 25%; }
+        .face-2 .dot:nth-child(2) { bottom: 25%; right: 25%; }
+        
+        .face-3 .dot:nth-child(1) { top: 25%; left: 25%; }
+        .face-3 .dot:nth-child(2) { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .face-3 .dot:nth-child(3) { bottom: 25%; right: 25%; }
+        
+        .face-4 .dot:nth-child(1) { top: 25%; left: 25%; }
+        .face-4 .dot:nth-child(2) { top: 25%; right: 25%; }
+        .face-4 .dot:nth-child(3) { bottom: 25%; left: 25%; }
+        .face-4 .dot:nth-child(4) { bottom: 25%; right: 25%; }
+        
+        .face-5 .dot:nth-child(1) { top: 25%; left: 25%; }
+        .face-5 .dot:nth-child(2) { top: 25%; right: 25%; }
+        .face-5 .dot:nth-child(3) { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .face-5 .dot:nth-child(4) { bottom: 25%; left: 25%; }
+        .face-5 .dot:nth-child(5) { bottom: 25%; right: 25%; }
+        
+        .face-6 .dot:nth-child(1) { top: 25%; left: 25%; }
+        .face-6 .dot:nth-child(2) { top: 25%; right: 25%; }
+        .face-6 .dot:nth-child(3) { top: 50%; left: 25%; transform: translateY(-50%); }
+        .face-6 .dot:nth-child(4) { top: 50%; right: 25%; transform: translateY(-50%); }
+        .face-6 .dot:nth-child(5) { bottom: 25%; left: 25%; }
+        .face-6 .dot:nth-child(6) { bottom: 25%; right: 25%; }
+        
+        /* 骰子3D面定位 */
+        .dice-face:nth-child(1) { transform: translateZ(50px); } /* 前 */
+        .dice-face:nth-child(2) { transform: rotateY(180deg) translateZ(50px); } /* 后 */
+        .dice-face:nth-child(3) { transform: rotateY(90deg) translateZ(50px); } /* 右 */
+        .dice-face:nth-child(4) { transform: rotateY(-90deg) translateZ(50px); } /* 左 */
+        .dice-face:nth-child(5) { transform: rotateX(90deg) translateZ(50px); } /* 上 */
+        .dice-face:nth-child(6) { transform: rotateX(-90deg) translateZ(50px); } /* 下 */
+        
+        .dice-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+        
+        .dice-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .dice-btn:hover {
+            background: #ff7043;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(255, 87, 34, 0.4);
+        }
+        
+        .dice-stats {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.2rem;
+            margin-top: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+        
+        /* 计时器样式 */
+        .timer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 1.5rem 0;
+        }
+        
+        .timer-display {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 1rem 0;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            min-width: 200px;
+            text-align: center;
+        }
+        
+        .timer-controls {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .timer-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .timer-btn.start {
+            background: var(--success);
+            color: white;
+        }
+        
+        .timer-btn.pause {
+            background: var(--warning);
+            color: var(--dark);
+        }
+        
+        .timer-btn.reset {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .timer-presets {
+            display: flex;
+            gap: 0.8rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .preset-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        .preset-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 计分板样式 */
+        .scoreboard-container {
+            margin: 1.5rem 0;
+        }
+        
+        .add-player-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .player-input {
+            flex-grow: 1;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+        }
+        
+        .player-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .players-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.2rem;
+        }
+        
+        .player-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.2rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .player-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .player-score {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        
+        .score-controls {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+        
+        .score-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            flex: 1;
+        }
+        
+        .score-btn.plus {
+            background: var(--success);
+            color: white;
+        }
+        
+        .score-btn.minus {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .remove-player {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: color 0.3s;
+        }
+        
+        .remove-player:hover {
+            color: var(--danger);
+        }
+        
+        /* 规则查询样式 */
+        .rules-container {
+            margin: 1.5rem 0;
+        }
+        
+        .rules-search {
+            width: 100%;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .rules-search::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .rules-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.2rem;
+        }
+        
+        .rule-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.2rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .rule-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* 页脚样式 */
+        footer {
+            text-align: center;
+            padding: 1.5rem 0;
+            margin-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.2rem;
+            margin: 1.2rem 0;
+        }
+        
+        .social-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .social-link:hover {
+            background: var(--accent);
+            transform: translateY(-3px);
+        }
+        
+        /* 移动端特定优化 */
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 10px;
+            }
+            
+            header {
+                padding: 1rem 0;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .tagline {
+                font-size: 0.85rem;
+            }
+            
+            .nav-tab {
+                padding: 0.6rem 0.8rem;
+                font-size: 0.85rem;
+            }
+            
+            .tool-card {
+                padding: 1rem;
+            }
+            
+            .tool-title {
+                font-size: 1.2rem;
+            }
+            
+            .dice {
+                width: 90px;
+                height: 90px;
+            }
+            
+            .dot {
+                width: 12px;
+                height: 12px;
+            }
+            
+            .dice-face:nth-child(1) { transform: translateZ(45px); }
+            .dice-face:nth-child(2) { transform: rotateY(180deg) translateZ(45px); }
+            .dice-face:nth-child(3) { transform: rotateY(90deg) translateZ(45px); }
+            .dice-face:nth-child(4) { transform: rotateY(-90deg) translateZ(45px); }
+            .dice-face:nth-child(5) { transform: rotateX(90deg) translateZ(45px); }
+            .dice-face:nth-child(6) { transform: rotateX(-90deg) translateZ(45px); }
+            
+            .timer-display {
+                font-size: 2.5rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* 平板电脑优化 */
+        @media (min-width: 768px) {
+            .tools-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .players-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .rules-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .add-player-form {
+                flex-direction: row;
+            }
+            
+            .tool-btn {
+                width: auto;
+            }
+        }
+        
+        /* 桌面端优化 */
+        @media (min-width: 1024px) {
+            .tools-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .players-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .rules-list {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .nav-tabs {
+                justify-content: center;
+            }
+        }
+        
+        @keyframes roll {
+            0% { transform: rotateX(0) rotateY(0) rotateZ(0); }
+            100% { transform: rotateX(720deg) rotateY(360deg) rotateZ(180deg); }
+        }
+        
+        .rolling {
+            animation: roll 1s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-dice-d20 logo-icon"></i>
+                <h1>桌游工具箱</h1>
+            </div>
+            <p class="tagline">一站式解决您的桌游需求 - 骰子、计时器、计分板和规则查询</p>
+            
+            <nav>
+                <ul class="nav-tabs">
+                    <li class="nav-tab active" data-tab="home">
+                        <i class="fas fa-home"></i>
+                        <span>首页</span>
+                    </li>
+                    <li class="nav-tab" data-tab="dice">
+                        <i class="fas fa-dice"></i>
+                        <span>骰子工具</span>
+                    </li>
+                    <li class="nav-tab" data-tab="timer">
+                        <i class="fas fa-stopwatch"></i>
+                        <span>计时器</span>
+                    </li>
+                    <li class="nav-tab" data-tab="scoreboard">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>计分板</span>
+                    </li>
+                    <li class="nav-tab" data-tab="rules">
+                        <i class="fas fa-book"></i>
+                        <span>规则查询</span>
+                    </li>
+                </ul>
+            </nav>
+        </header>
+        
+        <main class="main-content">
+            <!-- 首页内容 -->
+            <section id="home" class="tab-content active">
+                <h2>欢迎使用桌游工具箱</h2>
+                <p>这里汇集了各种实用的桌游工具，让您的游戏体验更加顺畅愉快！</p>
+                
+                <div class="tools-grid">
+                    <div class="tool-card">
+                        <i class="fas fa-dice tool-icon"></i>
+                        <h3 class="tool-title">随机骰子</h3>
+                        <p class="tool-description">提供多种骰子类型，支持自定义骰子面数，满足各种游戏需求。</p>
+                        <button class="tool-btn" data-tab="dice">
+                            <i class="fas fa-dice"></i>
+                            <span>使用骰子</span>
+                        </button>
+                    </div>
+                    
+                    <div class="tool-card">
+                        <i class="fas fa-stopwatch tool-icon"></i>
+                        <h3 class="tool-title">游戏计时器</h3>
+                        <p class="tool-description">精确的倒计时和正计时功能，帮助您管理游戏时间。</p>
+                        <button class="tool-btn" data-tab="timer">
+                            <i class="fas fa-stopwatch"></i>
+                            <span>使用计时器</span>
+                        </button>
+                    </div>
+                    
+                    <div class="tool-card">
+                        <i class="fas fa-chart-bar tool-icon"></i>
+                        <h3 class="tool-title">计分板</h3>
+                        <p class="tool-description">轻松记录多位玩家的得分，支持自定义分数调整。</p>
+                        <button class="tool-btn" data-tab="scoreboard">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>使用计分板</span>
+                        </button>
+                    </div>
+                    
+                    <div class="tool-card">
+                        <i class="fas fa-book tool-icon"></i>
+                        <h3 class="tool-title">规则查询</h3>
+                        <p class="tool-description">快速查找热门桌游的规则，解决游戏中的争议。</p>
+                        <button class="tool-btn" data-tab="rules">
+                            <i class="fas fa-book"></i>
+                            <span>查看规则</span>
+                        </button>
+                    </div>
+                    
+                    <div class="tool-card">
+                        <i class="fas fa-users tool-icon"></i>
+                        <h3 class="tool-title">玩家匹配</h3>
+                        <p class="tool-description">智能分组玩家，确保游戏队伍平衡，提升游戏体验。</p>
+                        <button class="tool-btn">
+                            <i class="fas fa-users"></i>
+                            <span>匹配玩家</span>
+                        </button>
+                    </div>
+                    
+                    <div class="tool-card">
+                        <i class="fas fa-random tool-icon"></i>
+                        <h3 class="tool-title">随机选择器</h3>
+                        <p class="tool-description">从列表中随机选择项目，适用于决定起始玩家或随机事件。</p>
+                        <button class="tool-btn">
+                            <i class="fas fa-random"></i>
+                            <span>随机选择</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 骰子工具内容 -->
+            <section id="dice" class="tab-content">
+                <h2>随机骰子生成器</h2>
+                <p>点击掷骰子按钮生成随机点数，可用于各种游戏和决策</p>
+                
+                <div class="dice-container">
+                    <div class="dice" id="dice">
+                        <!-- 骰子的6个面 -->
+                        <div class="dice-face face-1">
+                            <div class="dot"></div>
+                        </div>
+                        <div class="dice-face face-6">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>
+                        <div class="dice-face face-2">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>
+                        <div class="dice-face face-5">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>
+                        <div class="dice-face face-3">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>
+                        <div class="dice-face face-4">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dice-controls">
+                    <button class="dice-btn" id="rollSingleBtn">
+                        <i class="fas fa-dice"></i>
+                        <span>掷一个骰子</span>
+                    </button>
+                    <button class="dice-btn" id="rollDoubleBtn">
+                        <i class="fas fa-dice"></i>
+                        <i class="fas fa-dice"></i>
+                        <span>掷两个骰子</span>
+                    </button>
+                    <button class="dice-btn" id="rollCustomBtn">
+                        <i class="fas fa-cog"></i>
+                        <span>自定义骰子</span>
+                    </button>
+                </div>
+                
+                <div class="dice-stats">
+                    <h3>统计数据</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div>当前点数</div>
+                            <div class="stat-value" id="currentValue">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div>总投掷次数</div>
+                            <div class="stat-value" id="totalRolls">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div>平均点数</div>
+                            <div class="stat-value" id="averageValue">0.00</div>
+                        </div>
+                        <div class="stat-item">
+                            <div>最大点数</div>
+                            <div class="stat-value" id="maxValue">0</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 计时器内容 -->
+            <section id="timer" class="tab-content">
+                <h2>游戏计时器</h2>
+                <p>精确计时，帮助您管理游戏时间</p>
+                
+                <div class="timer-container">
+                    <div class="timer-display" id="timerDisplay">00:00</div>
+                    
+                    <div class="timer-controls">
+                        <button class="timer-btn start" id="startTimer">
+                            <i class="fas fa-play"></i>
+                            <span>开始</span>
+                        </button>
+                        <button class="timer-btn pause" id="pauseTimer">
+                            <i class="fas fa-pause"></i>
+                            <span>暂停</span>
+                        </button>
+                        <button class="timer-btn reset" id="resetTimer">
+                            <i class="fas fa-redo"></i>
+                            <span>重置</span>
+                        </button>
+                    </div>
+                    
+                    <div class="timer-presets">
+                        <button class="preset-btn" data-time="300">5分钟</button>
+                        <button class="preset-btn" data-time="600">10分钟</button>
+                        <button class="preset-btn" data-time="900">15分钟</button>
+                        <button class="preset-btn" data-time="1800">30分钟</button>
+                        <button class="preset-btn" data-time="3600">1小时</button>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 计分板内容 -->
+            <section id="scoreboard" class="tab-content">
+                <h2>游戏计分板</h2>
+                <p>轻松记录和追踪玩家得分</p>
+                
+                <div class="scoreboard-container">
+                    <div class="add-player-form">
+                        <input type="text" class="player-input" id="playerName" placeholder="输入玩家姓名">
+                        <button class="tool-btn" id="addPlayerBtn">
+                            <i class="fas fa-plus"></i>
+                            <span>添加玩家</span>
+                        </button>
+                    </div>
+                    
+                    <div class="players-grid" id="playersContainer">
+                        <!-- 玩家卡片将通过JavaScript动态添加 -->
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 规则查询内容 -->
+            <section id="rules" class="tab-content">
+                <h2>桌游规则查询</h2>
+                <p>快速查找热门桌游的规则说明</p>
+                
+                <div class="rules-container">
+                    <input type="text" class="rules-search" placeholder="搜索游戏规则...">
+                    
+                    <div class="rules-list">
+                        <div class="rule-card">
+                            <h3 class="rule-title">卡坦岛</h3>
+                            <p>资源收集与交易，建设道路与定居点，首先获得10分的玩家获胜。</p>
+                        </div>
+                        
+                        <div class="rule-card">
+                            <h3 class="rule-title">狼人杀</h3>
+                            <p>村民与狼人的对抗，通过推理和投票找出狼人，保护村庄。</p>
+                        </div>
+                        
+                        <div class="rule-card">
+                            <h3 class="rule-title">UNO</h3>
+                            <p>出完手中所有牌获胜，注意功能牌的使用和UNO的喊出时机。</p>
+                        </div>
+                        
+                        <div class="rule-card">
+                            <h3 class="rule-title">三国杀</h3>
+                            <p>角色扮演卡牌游戏，通过技能和策略击败对手，完成阵营目标。</p>
+                        </div>
+                        
+                        <div class="rule-card">
+                            <h3 class="rule-title">阿瓦隆</h3>
+                            <p>隐藏身份推理游戏，好人完成任务，坏人破坏任务并隐藏身份。</p>
+                        </div>
+                        
+                        <div class="rule-card">
+                            <h3 class="rule-title">璀璨宝石</h3>
+                            <p>通过收集宝石购买发展卡，首先获得15声望点的玩家获胜。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <div class="social-links">
+                <a href="#" class="social-link">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a href="#" class="social-link">
+                    <i class="fab fa-weibo"></i>
+                </a>
+                <a href="#" class="social-link">
+                    <i class="fab fa-weixin"></i>
+                </a>
+                <a href="#" class="social-link">
+                    <i class="fab fa-qq"></i>
+                </a>
+            </div>
+            <p>桌游工具箱 &copy; 2023 - 让每一场桌游都更加精彩！</p>
+        </footer>
+    </div>
+
+    <script>
+        // 标签页切换功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabs = document.querySelectorAll('.nav-tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // 移除所有active类
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // 添加active类到当前标签
+                    tab.classList.add('active');
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // 首页工具按钮点击切换到对应标签
+            document.querySelectorAll('.tool-btn[data-tab]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabId = btn.getAttribute('data-tab');
+                    if (tabId) {
+                        // 移除所有active类
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tabContents.forEach(content => content.classList.remove('active'));
+                        
+                        // 添加active类到目标标签
+                        document.querySelector(`.nav-tab[data-tab="${tabId}"]`).classList.add('active');
+                        document.getElementById(tabId).classList.add('active');
+                    }
+                });
+            });
+            
+            // 骰子功能
+            const dice = document.getElementById('dice');
+            const rollSingleBtn = document.getElementById('rollSingleBtn');
+            const currentValueEl = document.getElementById('currentValue');
+            const totalRollsEl = document.getElementById('totalRolls');
+            const averageValueEl = document.getElementById('averageValue');
+            const maxValueEl = document.getElementById('maxValue');
+            
+            let totalRolls = 0;
+            let totalValue = 0;
+            let maxValue = 0;
+            
+            // 骰子点数对应的旋转角度
+            const diceRotations = {
+                1: 'rotateX(0deg) rotateY(0deg)',
+                2: 'rotateX(0deg) rotateY(-90deg)',
+                3: 'rotateX(-90deg) rotateY(0deg)',
+                4: 'rotateX(90deg) rotateY(0deg)',
+                5: 'rotateX(0deg) rotateY(90deg)',
+                6: 'rotateX(180deg) rotateY(0deg)'
+            };
+            
+            // 掷骰子函数
+            function rollDice() {
+                // 添加滚动动画
+                dice.classList.add('rolling');
+                
+                // 禁用按钮防止重复点击
+                rollSingleBtn.disabled = true;
+                
+                // 1秒后显示结果
+                setTimeout(() => {
+                    // 生成随机点数（1-6）
+                    const value = Math.floor(Math.random() * 6) + 1;
+                    
+                    // 移除动画类
+                    dice.classList.remove('rolling');
+                    
+                    // 应用旋转以显示正确的点数
+                    dice.style.transform = diceRotations[value];
+                    
+                    // 更新统计数据
+                    updateStats(value);
+                    
+                    // 重新启用按钮
+                    rollSingleBtn.disabled = false;
+                }, 1000);
+            }
+            
+            // 更新统计信息
+            function updateStats(value) {
+                totalRolls++;
+                totalValue += value;
+                if (value > maxValue) maxValue = value;
+                
+                // 更新显示
+                currentValueEl.textContent = value;
+                totalRollsEl.textContent = totalRolls;
+                averageValueEl.textContent = (totalValue / totalRolls).toFixed(2);
+                maxValueEl.textContent = maxValue;
+            }
+            
+            // 绑定按钮点击事件
+            rollSingleBtn.addEventListener('click', rollDice);
+            
+            // 初始显示一个随机点数
+            const initialValue = Math.floor(Math.random() * 6) + 1;
+            dice.style.transform = diceRotations[initialValue];
+            updateStats(initialValue);
+            
+            // 计时器功能
+            const timerDisplay = document.getElementById('timerDisplay');
+            const startTimerBtn = document.getElementById('startTimer');
+            const pauseTimerBtn = document.getElementById('pauseTimer');
+            const resetTimerBtn = document.getElementById('resetTimer');
+            const presetBtns = document.querySelectorAll('.preset-btn');
+            
+            let timerInterval;
+            let timeLeft = 0;
+            let isRunning = false;
+            
+            function updateTimerDisplay() {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            function startTimer() {
+                if (!isRunning && timeLeft > 0) {
+                    isRunning = true;
+                    timerInterval = setInterval(() => {
+                        timeLeft--;
+                        updateTimerDisplay();
+                        
+                        if (timeLeft <= 0) {
+                            clearInterval(timerInterval);
+                            isRunning = false;
+                            timerDisplay.style.color = 'var(--danger)';
+                        }
+                    }, 1000);
+                }
+            }
+            
+            function pauseTimer() {
+                clearInterval(timerInterval);
+                isRunning = false;
+            }
+            
+            function resetTimer() {
+                clearInterval(timerInterval);
+                isRunning = false;
+                timeLeft = 0;
+                updateTimerDisplay();
+                timerDisplay.style.color = 'white';
+            }
+            
+            startTimerBtn.addEventListener('click', startTimer);
+            pauseTimerBtn.addEventListener('click', pauseTimer);
+            resetTimerBtn.addEventListener('click', resetTimer);
+            
+            presetBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    resetTimer();
+                    timeLeft = parseInt(btn.getAttribute('data-time'));
+                    updateTimerDisplay();
+                });
+            });
+            
+            // 计分板功能
+            const playerNameInput = document.getElementById('playerName');
+            const addPlayerBtn = document.getElementById('addPlayerBtn');
+            const playersContainer = document.getElementById('playersContainer');
+            
+            let players = [];
+            
+            function addPlayer(name) {
+                if (name.trim() === '') return;
+                
+                const player = {
+                    id: Date.now(),
+                    name: name.trim(),
+                    score: 0
+                };
+                
+                players.push(player);
+                renderPlayers();
+                playerNameInput.value = '';
+            }
+            
+            function removePlayer(id) {
+                players = players.filter(player => player.id !== id);
+                renderPlayers();
+            }
+            
+            function updateScore(id, change) {
+                players = players.map(player => {
+                    if (player.id === id) {
+                        return { ...player, score: Math.max(0, player.score + change) };
+                    }
+                    return player;
+                });
+                renderPlayers();
+            }
+            
+            function renderPlayers() {
+                playersContainer.innerHTML = '';
+                
+                players.forEach(player => {
+                    const playerCard = document.createElement('div');
+                    playerCard.className = 'player-card';
+                    playerCard.innerHTML = `
+                        <div class="player-header">
+                            <div class="player-name">${player.name}</div>
+                            <button class="remove-player" data-id="${player.id}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="player-score">${player.score}</div>
+                        <div class="score-controls">
+                            <button class="score-btn minus" data-id="${player.id}" data-change="-1">-1</button>
+                            <button class="score-btn plus" data-id="${player.id}" data-change="1">+1</button>
+                            <button class="score-btn plus" data-id="${player.id}" data-change="5">+5</button>
+                        </div>
+                    `;
+                    
+                    playersContainer.appendChild(playerCard);
+                });
+                
+                // 添加事件监听器
+                document.querySelectorAll('.remove-player').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const id = parseInt(btn.getAttribute('data-id'));
+                        removePlayer(id);
+                    });
+                });
+                
+                document.querySelectorAll('.score-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const id = parseInt(btn.getAttribute('data-id'));
+                        const change = parseInt(btn.getAttribute('data-change'));
+                        updateScore(id, change);
+                    });
+                });
+            }
+            
+            addPlayerBtn.addEventListener('click', () => {
+                addPlayer(playerNameInput.value);
+            });
+            
+            playerNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addPlayer(playerNameInput.value);
+                }
+            });
+            
+            // 添加几个示例玩家
+            addPlayer('玩家1');
+            addPlayer('玩家2');
+            addPlayer('玩家3');
+        });
+    </script>
+</body>
+</html>

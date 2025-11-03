@@ -1675,9 +1675,9 @@
         <p>网页媒体播放器 - 专为语言学习设计</p>
     </footer>
 
-    <!-- 引入MeCab JS库 -->
-    <script src="https://cdn.jsdelivr.net/npm/mecab-wasm@0.1.0-browser/mecab.js"></script>
-    
+    <!-- 引入kuromoji JS库 -->
+    <script src="./build/kuromoji.js"></script>
+
     <script>
         // 获取DOM元素
         const mediaModeBtn = document.getElementById('media-mode-btn');
@@ -1784,16 +1784,22 @@
         let isDraggingVolume = false;
         let japaneseWords = []; // 存储日语分词结果
         let currentWordIndex = 0; // 当前追加词汇的索引
-        let mecab = null; // MeCab实例
+        let tokenizer = null; // 用来存分词器实例
 
-        // 初始化MeCab
-        async function initMeCab() {
-            try {
-                mecab = await MeCab.create();
-                console.log('MeCab初始化成功');
-            } catch (error) {
-                console.error('MeCab初始化失败:', error);
-            }
+        // 初始化函数
+        async function initKuromoji() {
+            return new Promise((resolve, reject) => {
+                if (!window.kuromoji) { // 库是否加载
+                    reject(new Error("kuromoji.js 未加载"));
+                    return;
+                }
+                window.kuromoji.builder({ dicPath: "./dict/" }).build(function(err, tk) {
+                    if (err) { reject(err); return; }
+                    tokenizer = tk; // 保存实例
+                    console.log("kuromoji 初始化成功 ✅");
+                    resolve(tk);
+                });
+            });
         }
 
         // 存储配置到localStorage
@@ -2399,22 +2405,22 @@
             }
         }
         
-        // 显示日语分词结果
+        // 显示日语分词结果在底部面板
         async function showJapaneseWordSegmentation(sentence) {
-            if (!mecab) {
-                console.error('MeCab未初始化');
+            if (!tokenizer) { // kuromoji 实例
+                console.error('分词器未初始化');
                 return;
             }
-            
+
             try {
-                // 使用MeCab进行日语分词
-                const result = await mecab.parse(sentence);
-                japaneseWords = result.map(item => item[0]);
-                currentWordIndex = 0;
-                
+                // 使用 kuromoji 进行日语分词
+                const result = tokenizer.tokenize(sentence);
+                const japaneseWords = result.map(item => item.surface_form); // 取表面形
+                let currentWordIndex = 0;
+
                 // 打开字典面板
                 openDictionaryPanel();
-                
+
                 // 显示分词结果
                 panelDictionaryResult.innerHTML = `
                     <div class="word-header">
@@ -2429,22 +2435,20 @@
                         <div class="example">提示: 点击任意分词进行查询</div>
                     </div>
                 `;
-                
+
                 // 为分词结果添加点击事件
                 panelDictionaryResult.querySelectorAll('.word').forEach(wordElement => {
                     wordElement.addEventListener('click', () => {
                         const word = wordElement.getAttribute('data-word');
                         const index = parseInt(wordElement.getAttribute('data-index'));
-                        
+
                         // 高亮显示选中的单词
-                        panelDictionaryResult.querySelectorAll('.word').forEach(w => {
-                            w.classList.remove('highlight');
-                        });
+                        panelDictionaryResult.querySelectorAll('.word').forEach(w => w.classList.remove('highlight'));
                         wordElement.classList.add('highlight');
-                        
+
                         currentWordIndex = index;
                         panelSearchInput.value = word;
-                        
+
                         // 油猴脚本接口：分词点击回调
                         if (window.japaneseWordClicked) {
                             window.japaneseWordClicked(word, index);
@@ -2454,10 +2458,10 @@
                         }
                     });
                 });
-                
+
                 panelWordTitle.textContent = `日语分词`;
                 originalSentence.textContent = sentence;
-                
+
                 // 油猴脚本接口：分词完成回调
                 if (window.japaneseSegmentationComplete) {
                     window.japaneseSegmentationComplete(sentence, japaneseWords);
@@ -2467,7 +2471,7 @@
                 panelDictionaryResult.innerHTML = `<div class="error">日语分词失败: ${error.message}</div>`;
             }
         }
-        
+
         // 查询日语单词
         async function searchJapaneseWordInPanel(word) {
             if (!word.trim()) {
@@ -3811,8 +3815,22 @@
             updateMediaModeButton();
             updateControlButtons();
             
-            // 初始化MeCab
-            await initMeCab();
+            // 初始化 kuromoji 分词器
+            // await initKuromoji();
+            try {
+                await initKuromoji(); // 确保分词器实例已经生成
+                if (!tokenizer) {
+                    console.error("分词器未初始化");
+                    return;
+                }
+
+                // 测试分词
+                const sentence = "すもももももももものうち";
+                const tokens = tokenizer.tokenize(sentence);
+                console.log(tokens.map(t => t.surface_form).join(" | "));
+            } catch (err) {
+                console.error("初始化失败:", err);
+            }
         }
         
         // 启动初始化
