@@ -1632,14 +1632,14 @@
             原句将显示在这里...
         </div>
         
-        <!-- 标签页导航 -->
+        <!-- 标签页导航 默认标签页active-->  
         <div class="dictionary-tabs">
             <button class="tab-button active" data-tab="dictionary-tab">词典释义</button>
-            <button class="tab-button" data-tab="custom-tab">自定义释义</button>
             <button class="tab-button" data-tab="web-tab">网页查询</button>
+            <button class="tab-button" data-tab="custom-tab">自定义释义</button>
         </div>
         
-        <!-- 标签页内容 -->
+        <!-- 标签页内容 默认标签页active-->
         <div class="tab-content">
             <div id="dictionary-tab" class="tab-pane active">
                 <div class="dictionary-result" id="panel-dictionary-result">
@@ -1775,7 +1775,7 @@
         let ankiDecks = [];
         let ankiModels = [];
         let currentModelFields = [];
-        let activeTab = 'dictionary-tab'; // 当前激活的标签页
+        let activeTab = 'dictionary-tab'; // 当前激活的标签页，默认标签页
         let isProcessingAnki = false; // 防止重复点击
         let audioContext = null;
         let audioBuffer = null;
@@ -1783,8 +1783,11 @@
         let isDraggingProgress = false;
         let isDraggingVolume = false;
         let japaneseWords = []; // 存储日语分词结果
-        let currentWordIndex = 0; // 当前追加词汇的索引
         let tokenizer = null; // 用来存分词器实例
+        let currentWordIndex = -1; // 当前选择词汇的索引
+        let appendedWords = []; // 已追加词数组
+        
+        
 
         // 初始化函数
         async function initKuromoji() {
@@ -2405,67 +2408,46 @@
             }
         }
         
-        // 显示日语分词结果在底部面板
-        async function showJapaneseWordSegmentation(sentence) {
-            if (!tokenizer) { // kuromoji 实例
+        // 日语分词显示
+        async function showJapaneseWordSegmentation(sentence, currentWord = '') {
+            if (!tokenizer) {
                 console.error('分词器未初始化');
                 return;
             }
 
             try {
-                // 使用 kuromoji 进行日语分词
                 const result = tokenizer.tokenize(sentence);
-                const japaneseWords = result.map(item => item.surface_form); // 取表面形
-                let currentWordIndex = 0;
+                const japaneseWords = result.map(item => item.surface_form);
 
                 // 打开字典面板
                 openDictionaryPanel();
 
-                // 显示分词结果
-                panelDictionaryResult.innerHTML = `
-                    <div class="word-header">
-                        <div class="word-title">日语分词结果</div>
-                    </div>
-                    <div class="meaning-section">
-                        <div class="part-of-speech">句子: ${sentence}</div>
-                        <div class="definition">分词结果:</div>
-                        <div class="definition">
-                            ${japaneseWords.map((word, index) => `<span class="word ${index === 0 ? 'highlight' : ''}" data-word="${word}" data-index="${index}">${word}</span>`).join(' ')}
-                        </div>
-                        <div class="example">提示: 点击任意分词进行查询</div>
-                    </div>
-                `;
+                // 更新原句显示，使用日语分词块
+                updateOriginalSentence(sentence, currentWord, 'japanese', japaneseWords);
 
-                // 为分词结果添加点击事件
+                // 为字典面板分词绑定点击事件
                 panelDictionaryResult.querySelectorAll('.word').forEach(wordElement => {
                     wordElement.addEventListener('click', () => {
                         const word = wordElement.getAttribute('data-word');
                         const index = parseInt(wordElement.getAttribute('data-index'));
-
-                        // 高亮显示选中的单词
                         panelDictionaryResult.querySelectorAll('.word').forEach(w => w.classList.remove('highlight'));
                         wordElement.classList.add('highlight');
-
-                        currentWordIndex = index;
                         panelSearchInput.value = word;
-
-                        // 油猴脚本接口：分词点击回调
                         if (window.japaneseWordClicked) {
                             window.japaneseWordClicked(word, index);
                         } else {
-                            // 默认行为：查询日语单词
                             searchJapaneseWordInPanel(word);
                         }
                     });
                 });
 
                 panelWordTitle.textContent = `日语分词`;
-                originalSentence.textContent = sentence;
 
-                // 油猴脚本接口：分词完成回调
+                // 分词完成回调
                 if (window.japaneseSegmentationComplete) {
                     window.japaneseSegmentationComplete(sentence, japaneseWords);
                 }
+
             } catch (error) {
                 console.error('日语分词失败:', error);
                 panelDictionaryResult.innerHTML = `<div class="error">日语分词失败: ${error.message}</div>`;
@@ -2716,33 +2698,58 @@
             }
         }
 
-        // 更新原句显示，使单词可点击
-        function updateOriginalSentence(sentence, currentWord) {
-            // 使用正则表达式匹配单词，包括带有标点符号的单词
-            const wordRegex = /[a-zA-Z]+(?:[''’][a-zA-Z]+)*/g;
-            let lastIndex = 0;
+        // 更新原句显示，使单词/分词可点击，增加点击时直接追加到 appendedWords
+        function updateOriginalSentence(sentence, currentWord, currentLanguageMode = 'english', japaneseWords = []) {
             let clickableSentence = '';
-            
-            let match;
-            while ((match = wordRegex.exec(sentence)) !== null) {
-                // 添加匹配前的非单词部分
-                clickableSentence += sentence.substring(lastIndex, match.index);
-                
-                // 添加可点击的单词，当前单词高亮显示
-                const wordClass = match[0].toLowerCase() === currentWord.toLowerCase() ? 'sentence-word highlight' : 'sentence-word';
-                clickableSentence += `<span class="${wordClass}" data-word="${match[0]}">${match[0]}</span>`;
-                
-                lastIndex = match.index + match[0].length;
-            }
-            
-            // 添加剩余的非单词部分
-            clickableSentence += sentence.substring(lastIndex);
-            
+
+            // 根据语言模式获取词块
+            const words = currentLanguageMode === 'japanese' && japaneseWords.length > 0 
+                ? japaneseWords 
+                : sentence.match(/\S+/g) || []; // 英文或其他语言按空白分词
+
+            words.forEach((word, index) => {
+                const wordClass = appendedWords.includes(word) ? 'sentence-word highlight' : 'sentence-word';
+
+                // 英文模式加空格，日语模式不加
+                const space = currentLanguageMode === 'japanese' ? '' : '&nbsp;';
+
+                clickableSentence += `<span class="${wordClass}" data-word="${word}" data-index="${index}">${word}</span>${space}`;
+            });
+
             originalSentence.innerHTML = clickableSentence;
-            
-            // 为原句中的单词添加点击事件
+
+            // 点击词块立即搜索并高亮
             originalSentence.removeEventListener('click', handleSentenceWordClick);
-            originalSentence.addEventListener('click', handleSentenceWordClick);
+            // 点击句子词块立即搜索
+            originalSentence.addEventListener('click', (e) => {
+                const span = e.target.closest('.sentence-word');
+                if (!span) return;
+
+                const word = span.getAttribute('data-word');
+                const index = parseInt(span.getAttribute('data-index'));
+
+                // 单击词块 → 重置已选词，只保留当前点击词
+                appendedWords = [word];
+                currentWordIndex = index;
+                panelSearchInput.value = word;
+
+                // 更新高亮
+                originalSentence.querySelectorAll('.sentence-word').forEach((s) => {
+                    s.classList.toggle('highlight', appendedWords.includes(s.getAttribute('data-word')));
+                });
+
+                // 立即触发词典搜索
+                if (currentLanguageMode === 'english') {
+                    searchWordInPanel(word);
+                } else {
+                    searchJapaneseWordInPanel(word);
+                }
+
+                // 如果当前激活标签页是网页查询，则自动加载网页
+                if (activeTab === 'web-tab') {
+                    loadWebSearch(word);
+                }
+            });
         }
 
         // 处理原句中单词点击
@@ -2939,38 +2946,48 @@
         
         // 追加词汇功能
         appendWordBtn.addEventListener('click', () => {
-            if (currentLanguageMode === 'japanese' && japaneseWords.length > 0) {
-                currentWordIndex++;
-                if (currentWordIndex >= japaneseWords.length) {
-                    currentWordIndex = japaneseWords.length - 1;
-                }
-                
-                // 构建追加后的词汇
-                let combinedWord = '';
-                for (let i = 0; i <= currentWordIndex; i++) {
-                    combinedWord += japaneseWords[i];
-                }
-                
-                panelSearchInput.value = combinedWord;
-                
-                // 油猴脚本接口：追加词汇回调
-                if (window.japaneseWordAppended) {
-                    window.japaneseWordAppended(combinedWord, currentWordIndex);
-                } else {
-                    // 默认行为：查询日语单词
-                    searchJapaneseWordInPanel(combinedWord);
-                }
-                
-                // 高亮显示追加的词汇
-                panelDictionaryResult.querySelectorAll('.word').forEach(w => {
-                    w.classList.remove('highlight');
-                    if (parseInt(w.getAttribute('data-index')) === currentWordIndex) {
-                        w.classList.add('highlight');
-                    }
-                });
+            const sentenceSpans = originalSentence.querySelectorAll('.sentence-word');
+            if (!sentenceSpans.length) return;
+
+            currentWordIndex++;
+            if (currentWordIndex >= sentenceSpans.length) currentWordIndex = sentenceSpans.length - 1;
+
+            const currentSpan = sentenceSpans[currentWordIndex];
+            const word = currentSpan.getAttribute('data-word');
+
+            appendedWords.push(word);
+            panelSearchInput.value = appendedWords.join('');
+
+            // 高亮已追加词块
+            sentenceSpans.forEach((span, idx) => {
+                span.classList.toggle('highlight', idx <= currentWordIndex);
+            });
+
+            // 触发搜索
+            if (currentLanguageMode === 'english') {
+                searchWordInPanel(panelSearchInput.value);
+            } else {
+                searchJapaneseWordInPanel(panelSearchInput.value);
+            }
+
+            // 如果当前标签页是网页查询 → 自动加载网页
+            if (activeTab === 'web-tab') {
+                loadWebSearch(panelSearchInput.value);
             }
         });
-        
+
+        // 重置追加词汇和搜索栏
+        function resetAppendedWords() {
+            currentWordIndex = -1;
+            appendedWords = [];
+            panelSearchInput.value = '';
+            
+            // 清除原句高亮
+            originalSentence.querySelectorAll('.sentence-word').forEach(span => {
+                span.classList.remove('highlight');
+            });
+        }
+
         // Anki连接检查
         async function checkAnkiConnection() {
             ankiStatusText.textContent = '检查Anki连接状态...';
@@ -3707,12 +3724,16 @@
                 
         // 底部面板功能
         function openDictionaryPanel() {
+            panelDictionaryResult.style.display = 'block'; //测试
+            panelWordTitle.style.display = 'block';  //测试
             dictionaryPanel.classList.add('active');
             panelOverlay.classList.add('active');
             document.body.style.overflow = 'hidden';
         }
         
         function closeDictionaryPanel() {
+            panelDictionaryResult.style.display = 'none'; //测试
+            panelWordTitle.style.display = 'none'; //测试
             dictionaryPanel.classList.remove('active');
             panelOverlay.classList.remove('active');
             document.body.style.overflow = '';
@@ -3727,6 +3748,9 @@
                     audioPlayPauseBtn.classList.add('active');
                 }
             }
+
+            // 清空搜索栏和追加状态
+            resetAppendedWords();
         }
         
         closePanelBtn.addEventListener('click', closeDictionaryPanel);
