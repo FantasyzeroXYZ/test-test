@@ -1623,7 +1623,7 @@
                     <i class="fas fa-plus"></i>
                 </button>
                 <button class="panel-anki-btn" id="panel-add-to-anki-btn" title="添加到Anki">
-                    <i class="fas fa-plus-circle"></i>
+                    <img src="/assets/icons8-anki-24.png" alt="Anki" class="anki-icon">
                 </button>
             </div>
         </div>
@@ -1766,7 +1766,7 @@
         let currentHighlightedWord = null;
         let currentWord = '';
         let currentSentence = '';
-        let currentSubtitleIndex = -1;
+        let currentSubtitleIndex = 0; // 当前字幕索引
         let currentMediaFile = null;
         let currentMediaType = 'video'; // 'video' 或 'audio'
         let currentLanguageMode = 'english'; // 'english' 或 'japanese'
@@ -1803,6 +1803,14 @@
                     resolve(tk);
                 });
             });
+        }
+
+        // 初始化音频上下文
+        function getAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
         }
 
         // 存储配置到localStorage
@@ -1883,85 +1891,110 @@
             }
         });
         
-        // 视频文件选择处理
-        videoFileInput.addEventListener('change', function(e) {
+        // 🎬 视频文件加载
+        videoFileInput.addEventListener('change', async function(e) {
             const file = e.target.files[0];
-            if (file) {
-                currentMediaFile = file;
-                currentMediaType = 'video';
-                trackTitle.textContent = file.name.replace(/\.[^/.]+$/, ""); // 移除扩展名
-                trackDescription.textContent = `文件大小: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
-                mediaIcon.className = 'fas fa-video';
-                
-                // 暂停音频播放器（如果正在播放）
-                if (audioElement && !audioElement.paused) {
-                    audioElement.pause();
-                    audioPlayPauseBtn.textContent = '▶';
-                }
-                
-                // 创建文件URL并设置播放器源
-                const fileURL = URL.createObjectURL(file);
-                videoPlayer.src = fileURL;
-                
-                // 切换到视频模式
-                switchToVideoMode();
-                
-                // 显示视频播放器
-                videoPlayerContainer.classList.add('active');
-                
-                // 重置字幕
-                subtitles = [];
-                subtitleText.innerHTML = "无字幕";
-                videoSubtitles.innerHTML = "";
-                updateSubtitleList();
+            if (!file) return;
+
+            currentMediaFile = file;
+            currentMediaType = 'video';
+            trackTitle.textContent = file.name.replace(/\.[^/.]+$/, "");
+            trackDescription.textContent = `文件大小: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+            mediaIcon.className = 'fas fa-video';
+
+            // 暂停音频播放器（如果正在播放）
+            if (audioElement && !audioElement.paused) {
+                audioElement.pause();
+                audioPlayPauseBtn.textContent = '▶';
             }
+
+            // 创建视频URL并设置播放器
+            const fileURL = URL.createObjectURL(file);
+            videoPlayer.src = fileURL;
+
+            // 切换视频模式
+            switchToVideoMode();
+            videoPlayerContainer.classList.add('active');
+
+            // 重置字幕
+            subtitles = [];
+            subtitleText.innerHTML = "无字幕";
+            videoSubtitles.innerHTML = "";
+            updateSubtitleList();
+
+            // 尝试加载音频缓冲（如果视频中有音轨）
+            await loadAudioBuffer(file);
         });
-        
-        // 音频文件选择处理
+                
+        async function loadAudioFile(file) {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            try {
+                if (file.type.startsWith('audio/')) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                    console.log('音频文件加载完成', audioBuffer);
+                } else if (file.type.startsWith('video/')) {
+                    const arrayBuffer = await extractAudioFromVideoBlob(file);
+                    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                    console.log('视频音轨提取完成', audioBuffer);
+                } else {
+                    throw new Error('不支持的媒体类型');
+                }
+            } catch (e) {
+                console.error('加载音频失败:', e);
+                audioBuffer = null;
+            }
+        }
+
+        async function extractAudioFromVideoBlob(videoBlob) {
+            return new Promise((resolve, reject) => {
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(videoBlob);
+                video.muted = true;
+                video.play();
+
+                video.onloadedmetadata = () => {
+                    const stream = video.captureStream();
+                    if (stream.getAudioTracks().length === 0) return reject('视频没有音轨');
+
+                    const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                    const chunks = [];
+                    recorder.ondataavailable = e => chunks.push(e.data);
+                    recorder.onstop = async () => {
+                        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+                        resolve(await audioBlob.arrayBuffer());
+                    };
+                    recorder.start();
+                    setTimeout(() => recorder.stop(), (video.duration || 1) * 1000); 
+                };
+                video.onerror = e => reject(e);
+            });
+        }
+
+
+        // 🎵 音频文件加载
         audioFileInput.addEventListener('change', async function(e) {
             const file = e.target.files[0];
-            if (file) {
-                currentMediaFile = file;
-                currentMediaType = 'audio';
-                trackTitle.textContent = file.name.replace(/\.[^/.]+$/, ""); // 移除扩展名
-                trackDescription.textContent = `文件大小: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
-                mediaIcon.className = 'fas fa-music';
-                
-                // 暂停视频播放器（如果正在播放）
-                if (!videoPlayer.paused) {
-                    videoPlayer.pause();
-                }
-                
-                // 创建文件URL并设置播放器源
-                const fileURL = URL.createObjectURL(file);
-                
-                // 创建音频元素
-                if (!audioElement) {
-                    audioElement = new Audio();
-                }
-                audioElement.src = fileURL;
-                
-                // 初始化音频控件
-                initAudioControls();
-                
-                // 切换到音频模式
-                switchToAudioMode();
-                
-                // 显示音频播放器
-                audioPlayerContainer.classList.add('active');
-                
-                // 重置字幕
-                subtitles = [];
-                subtitleText.innerHTML = "无字幕";
-                videoSubtitles.innerHTML = "";
-                updateSubtitleList();
-                updateAudioSubtitles();
-                
-                // 加载音频文件到Web Audio API
-                await loadAudioBuffer(file);
-            }
+            if (!file) return;
+
+            currentMediaFile = file;
+            currentMediaType = 'audio';
+            trackTitle.textContent = file.name.replace(/\.[^/.]+$/, "");
+            trackDescription.textContent = `文件大小: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+            mediaIcon.className = 'fas fa-music';
+
+            // 创建音频URL并设置播放器
+            const fileURL = URL.createObjectURL(file);
+            audioElement.src = fileURL;
+
+            // 关闭视频模式
+            videoPlayerContainer.classList.remove('active');
+
+            // 加载音频缓冲
+            await loadAudioBuffer(file);
         });
-        
+                
         // 初始化音频控件
         function initAudioControls() {
             // 更新音频时长
@@ -2188,24 +2221,23 @@
             }
         });
         
-        // 加载音频文件到Web Audio API
+        // 自适应加载音频缓冲（无论是音频或视频）
         async function loadAudioBuffer(file) {
+            const ctx = getAudioContext();
+
+            // 读取文件为 ArrayBuffer
+            const arrayBuffer = await file.arrayBuffer();
+
             try {
-                // 创建AudioContext
-                if (!audioContext) {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                
-                // 读取文件
-                const arrayBuffer = await file.arrayBuffer();
-                audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                
-                console.log('音频文件已加载到Web Audio API');
-            } catch (error) {
-                console.error('加载音频文件失败:', error);
+                // 尝试解码音频（即便是视频，也可能成功提取音轨）
+                audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+                console.log("✅ 音频缓冲加载成功:", audioBuffer);
+            } catch (err) {
+                console.warn("⚠ 无法直接从文件提取音频:", err);
+                audioBuffer = null;
             }
         }
-        
+                
         // 字幕文件选择处理
         subtitleFileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -3315,7 +3347,8 @@
         
         // 修复音频截取问题 - 使用之前成功的代码
         async function processAnkiCard(word, definition) {
-            // 准备Anki卡片数据
+            console.log('audioBuffer', audioBuffer, 'audioContext', audioContext, 'currentSubtitleIndex', currentSubtitleIndex);
+
             const note = {
                 deckName: deckSelect.value,
                 modelName: modelSelect.value,
@@ -3324,42 +3357,40 @@
                     [sentenceFieldSelect.value]: currentSentence,
                     [definitionFieldSelect.value]: definition
                 },
-                options: {
-                    allowDuplicate: false
-                },
+                options: { allowDuplicate: false },
                 tags: ['media-player']
             };
-            
-            // 如果有音频，先处理音频
-            if (audioBuffer && audioContext && currentSubtitleIndex >= 0) {
+
+            // 自动截取当前单词所在字幕音频
+            if (audioBuffer && currentSubtitleIndex >= 0) {
                 try {
-                    const audioFileName = await processAudioFile(word);
-                    if (audioFileName) {
-                        // 确保音频字段引用格式正确
-                        note.fields[audioFieldSelect.value] = `[sound:${audioFileName}]`;
-                        console.log('音频字段设置:', audioFileName);
+                    const audioBlob = await generateAudioClip(currentSubtitleIndex);
+                    if (audioBlob) {
+                        const storedAudioName = await processAudioFile(word, audioBlob);
+                        if (storedAudioName) {
+                            note.fields[audioFieldSelect.value] = `[sound:${storedAudioName}]`;
+                            console.log('音频字段设置:', storedAudioName);
+                        }
                     }
                 } catch (error) {
-                    console.error('音频处理失败:', error);
-                    // 即使音频处理失败，仍然继续添加卡片
+                    console.error('音频截取失败:', error);
                 }
             }
-            
-            // 如果有图片字段设置，则截图
+
+            // 处理截图
             if (imageFieldSelect.value && currentMediaType === 'video' && currentMediaFile) {
                 try {
-                    const imageFileName = await captureVideoFrame(word);
-                    if (imageFileName) {
-                        note.fields[imageFieldSelect.value] = `<img src="${imageFileName}">`;
-                        console.log('图片字段设置:', imageFileName);
+                    const storedImageName = await captureVideoFrame(word);
+                    if (storedImageName) {
+                        note.fields[imageFieldSelect.value] = `<img src="${storedImageName}">`;
+                        console.log('图片字段设置:', storedImageName);
                     }
                 } catch (error) {
                     console.error('截图失败:', error);
-                    // 即使截图失败，仍然继续添加卡片
                 }
             }
-            
-            // 添加卡片到Anki
+
+            // 添加到 Anki
             await addCardToAnki(note);
         }
 
@@ -3380,10 +3411,9 @@
             return fileName;
         }
 
-        // 处理音频文件并返回实际存储名
-        async function processAudioFile(word) {
+        // 自动截取当前字幕的音频片段
+        async function processAudioFile(word, audioBlob) {
             try {
-                const audioBlob = await generateAudioClip(currentSubtitleIndex);
                 const audioFileName = generateAudioFileName(word);
                 console.log('准备存储音频文件:', audioFileName);
 
@@ -3398,7 +3428,7 @@
                         params: {
                             filename: audioFileName,
                             data: base64Audio.split(',')[1],
-                            deleteExisting: true // ✅ 允许覆盖，防止自动改名
+                            deleteExisting: true
                         }
                     })
                 });
@@ -3409,7 +3439,6 @@
                     return null;
                 }
 
-                // ✅ 使用返回的 result 字段（实际文件名）
                 const storedName = result.result || audioFileName;
                 console.log('音频文件实际存储名:', storedName);
                 return storedName;
@@ -3419,7 +3448,7 @@
                 return null;
             }
         }
-
+                
         // 截图功能
         async function captureVideoFrame(word) {
             return new Promise((resolve, reject) => {
@@ -3479,53 +3508,78 @@
             });
         }
 
-        // 生成当前句子的音频片段
-        function generateAudioClip(subtitleIndex) {
-            return new Promise((resolve, reject) => {
-                if (!audioBuffer || !audioContext) {
-                    reject(new Error('音频未加载，无法生成音频片段'));
-                    return;
+        function bufferToWavBlob(buffer) {
+            const numChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const length = buffer.length * numChannels * 2 + 44;
+            const arrayBuffer = new ArrayBuffer(length);
+            const view = new DataView(arrayBuffer);
+
+            // 写 WAV 头部
+            let offset = 0;
+            function writeString(s) {
+                for (let i = 0; i < s.length; i++) view.setUint8(offset++, s.charCodeAt(i));
+            }
+
+            function write16(v) { view.setInt16(offset, v, true); offset += 2; }
+            function write32(v) { view.setUint32(offset, v, true); offset += 4; }
+
+            writeString('RIFF');
+            write32(length - 8);
+            writeString('WAVEfmt ');
+            write32(16);
+            write16(1);
+            write16(numChannels);
+            write32(sampleRate);
+            write32(sampleRate * numChannels * 2);
+            write16(numChannels * 2);
+            write16(16);
+            writeString('data');
+            write32(length - 44);
+
+            // 写音频数据
+            for (let i = 0; i < buffer.length; i++) {
+                for (let ch = 0; ch < numChannels; ch++) {
+                    let sample = buffer.getChannelData(ch)[i];
+                    sample = Math.max(-1, Math.min(1, sample));
+                    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+                    offset += 2;
                 }
-                
-                const subtitle = subtitles[subtitleIndex];
-                const startTime = Math.max(0, subtitle.start);
-                const endTime = Math.min(audioBuffer.duration, subtitle.end);
-                
-                // 计算开始和结束的样本位置
-                const startOffset = Math.floor(startTime * audioBuffer.sampleRate);
-                const endOffset = Math.floor(endTime * audioBuffer.sampleRate);
-                const length = endOffset - startOffset;
-                
-                if (length <= 0) {
-                    reject(new Error('无效的音频片段长度'));
-                    return;
-                }
-                
-                // 创建新的音频缓冲区
-                const newBuffer = audioContext.createBuffer(
-                    audioBuffer.numberOfChannels,
-                    length,
-                    audioBuffer.sampleRate
-                );
-                
-                // 复制音频数据
-                for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-                    const channelData = audioBuffer.getChannelData(channel);
-                    const newChannelData = newBuffer.getChannelData(channel);
-                    
-                    for (let i = 0; i < length; i++) {
-                        newChannelData[i] = channelData[startOffset + i];
-                    }
-                }
-                
-                // 将音频缓冲区转换为WAV格式
-                const wavBlob = bufferToWav(newBuffer);
-                
-                console.log('音频片段已生成');
-                resolve(wavBlob);
-            });
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
         }
-        
+
+        // 生成当前句子的音频片段
+        async function generateAudioClip(subtitleIndex) {
+            if (!audioBuffer) throw new Error('audioBuffer 未加载');
+
+            const startTime = subtitles[subtitleIndex].start; // 单词对应字幕开始时间
+            const endTime = subtitles[subtitleIndex].end;     // 单词对应字幕结束时间
+
+            const sampleRate = audioBuffer.sampleRate;
+            const startSample = Math.floor(startTime * sampleRate);
+            const endSample = Math.floor(endTime * sampleRate);
+            const frameCount = endSample - startSample;
+
+            const newBuffer = audioContext.createBuffer(
+                audioBuffer.numberOfChannels,
+                frameCount,
+                sampleRate
+            );
+
+            for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+                const oldData = audioBuffer.getChannelData(channel);
+                const newData = newBuffer.getChannelData(channel);
+                for (let i = 0; i < frameCount; i++) {
+                    newData[i] = oldData[startSample + i];
+                }
+            }
+
+            // 转 Blob
+            return bufferToWavBlob(newBuffer);
+        }
+                    
         // 将AudioBuffer转换为WAV Blob
         function bufferToWav(buffer) {
             const numChannels = buffer.numberOfChannels;
@@ -3589,49 +3643,6 @@
             for (let i = 0; i < string.length; i++) {
                 view.setUint8(offset + i, string.charCodeAt(i));
             }
-        }
-
-        // 处理整张卡片
-        async function processAnkiCard(word, definition) {
-            const note = {
-                deckName: deckSelect.value,
-                modelName: modelSelect.value,
-                fields: {
-                    [wordFieldSelect.value]: word,
-                    [sentenceFieldSelect.value]: currentSentence,
-                    [definitionFieldSelect.value]: definition
-                },
-                options: { allowDuplicate: false },
-                tags: ['media-player']
-            };
-
-            // 若有音频，先处理音频
-            if (audioBuffer && audioContext && currentSubtitleIndex >= 0) {
-                try {
-                    const storedAudioName = await processAudioFile(word);
-                    if (storedAudioName) {
-                        note.fields[audioFieldSelect.value] = `[sound:${storedAudioName}]`;
-                        console.log('音频字段设置:', storedAudioName);
-                    }
-                } catch (error) {
-                    console.error('音频处理失败:', error);
-                }
-            }
-
-            // 若有图片字段设置，则截图
-            if (imageFieldSelect.value && currentMediaType === 'video' && currentMediaFile) {
-                try {
-                    const storedImageName = await captureVideoFrame(word);
-                    if (storedImageName) {
-                        note.fields[imageFieldSelect.value] = `<img src="${storedImageName}">`;
-                        console.log('图片字段设置:', storedImageName);
-                    }
-                } catch (error) {
-                    console.error('截图失败:', error);
-                }
-            }
-
-            await addCardToAnki(note);
         }
 
         async function addCardToAnki(note) {
