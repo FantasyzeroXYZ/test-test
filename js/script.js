@@ -113,7 +113,7 @@ async function initKuromoji() {
             reject(new Error("kuromoji.js 未加载"));
             return;
         }
-        window.kuromoji.builder({ dicPath: "./dict/" }).build(function(err, tk) {
+        window.kuromoji.builder({ dicPath: "./kuromoji/dict/" }).build(function(err, tk) {
             if (err) { reject(err); return; }
             tokenizer = tk; // 保存实例
             console.log("kuromoji 初始化成功 ✅");

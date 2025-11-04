@@ -2,21 +2,28 @@
 ## 本地服务器启动
 * 在文件所在目录下启动本地服务器:`python -m http.server 8080`
 * 浏览器访问：`http://localhost:8080/`
-
+## 其他
+* 相对路径一般为`./abc/abc.js`,根目录要用.表示
 * 利用npm下载 npm install 文件
 
+## 拆分
+```
+
+```
+## 处理
 * [x] kuromoji.js进行日语分词
 * [x] 日语点击分词查词
 * [x] 日语分词叠加查词
 * [x] 网页词典在点击不同词后自动搜索显示
 * [x] 将anki添加按钮变成anki的logo图标
 * [x] 音频截取问题
+* [ ] 音频视频模式切换没有显示对应画面
 * [ ] 词典释义显示顺序设置和替换
 * [ ] 打开全部字幕时，滚动到当前位置
+* [ ] 截取音频有时和字幕时间对不上
+* [ ] 移动端音频制卡的延迟问题
 
-
-
-
+## 杂
 * original-sentence 词典框显示的句子
 * panelDictionaryResult 词典框释义显示的部分：html放入
 * subtitleItem.addEventListener 字幕句子点击，不同词汇模式 
