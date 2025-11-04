@@ -105,6 +105,7 @@ let japaneseWords = []; // 存储日语分词结果
 let tokenizer = null; // 用来存分词器实例
 let currentWordIndex = -1; // 当前选择词汇的索引
 let appendedWords = []; // 已追加词数组
+let isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 // 初始化函数
 async function initKuromoji() {
@@ -641,13 +642,15 @@ function parseSRTSubtitle(content) {
                     parseInt(timeMatch[7]) + 
                     parseInt(timeMatch[8]) / 1000;
                 
-                const text = lines.slice(2).join(' ').trim();
+                // 合并所有文本行，并清理末尾编号
+                let text = lines.slice(2).join(' ').trim();
+                text = cleanSubtitleText(text);
                 
                 if (text) {
                     subtitles.push({
                         start: startTime,
                         end: endTime,
-                        text: text.replace(/<[^>]*>/g, '') // 移除HTML标签
+                        text: text
                     });
                 }
             }
@@ -692,8 +695,31 @@ function parseVTTSubtitle(content) {
     }
     
     if (currentSubtitle && currentSubtitle.text) {
+        // 清理字幕文本
+        currentSubtitle.text = cleanSubtitleText(currentSubtitle.text);
         subtitles.push(currentSubtitle);
     }
+}
+
+// 清理字幕文本，移除末尾的顺序编号和数字
+function cleanSubtitleText(text) {
+    // 移除HTML标签
+    text = text.replace(/<[^>]*>/g, '');
+    
+    // 移除常见的末尾编号模式，如 "1", "01", "(1)", "[1]" 等
+    text = text.replace(/\s*[(\[]?\d+[)\]]?\s*$/, '');
+    
+    // 移除其他可能的编号格式
+    text = text.replace(/\s*\d+\.\s*$/, '');
+    text = text.replace(/\s*-\s*\d+\s*$/, '');
+    
+    // 移除形如 "Uncle is my uncle, too... I think. 267" 的末尾数字
+    text = text.replace(/\s*\d+\s*$/, '');
+    
+    // 移除多个连续空格
+    text = text.replace(/\s+/g, ' ');
+    
+    return text.trim();
 }
 
 // 更新字幕列表
@@ -775,7 +801,7 @@ function ensureCurrentSubtitleVisible() {
     }
 }
 
-// 创建可点击的字幕内容（PC端友好）
+// 创建可点击的字幕内容（PC端和移动端优化）
 function createClickableSubtitleContent(text, index) {
     if (currentLanguageMode === 'english') {
         // 英语模式：创建可点击的单词
@@ -799,7 +825,7 @@ function createClickableSubtitleContent(text, index) {
         
         return clickableWords;
     } else {
-        // 日语模式：显示可点击的分词
+        // 日语模式：显示可点击的分词 - 不加间隔
         return `<span class="japanese-sentence selectable-text" data-sentence="${text}" data-index="${index}">${text}</span>`;
     }
 }
@@ -810,6 +836,9 @@ function handleSubtitleClick(e, text, index) {
         // 英语模式：点击单词查询
         if (e.target.classList.contains('word')) {
             const word = e.target.getAttribute('data-word');
+            
+            // 复制单词到剪贴板
+            copyToClipboard(word);
             
             // 点击单词时暂停播放
             pauseCurrentMedia();
@@ -827,6 +856,9 @@ function handleSubtitleClick(e, text, index) {
     } else {
         // 日语模式：点击句子，显示分词结果
         if (e.target.classList.contains('japanese-sentence')) {
+            // 复制句子到剪贴板
+            copyToClipboard(text);
+            
             // 点击句子时暂停播放
             pauseCurrentMedia();
             
@@ -837,6 +869,24 @@ function handleSubtitleClick(e, text, index) {
             currentSentence = text;
         }
     }
+}
+
+// 复制文本到剪贴板
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        // 显示复制成功提示
+        showStatusMessage(`"${text}" 已复制到剪贴板`);
+    }).catch(err => {
+        console.error('复制到剪贴板失败:', err);
+        // 备用方案
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showStatusMessage(`"${text}" 已复制到剪贴板`);
+    });
 }
 
 // 暂停当前媒体播放
@@ -877,6 +927,10 @@ async function showJapaneseWordSegmentation(sentence, currentWord = '') {
                 panelDictionaryResult.querySelectorAll('.word').forEach(w => w.classList.remove('highlight'));
                 wordElement.classList.add('highlight');
                 panelSearchInput.value = word;
+                
+                // 复制单词到剪贴板
+                copyToClipboard(word);
+                
                 if (window.japaneseWordClicked) {
                     window.japaneseWordClicked(word, index);
                 } else {
@@ -988,8 +1042,6 @@ function updateActiveSubtitleItem() {
     items.forEach((item, index) => {
         if (index === currentSubtitleIndex) {
             item.classList.add('active');
-            // 滚动到当前激活的字幕项
-            item.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
             item.classList.remove('active');
         }
@@ -1014,6 +1066,36 @@ function formatTime(seconds) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
+// 查找下一个有字幕的位置
+function findNextSubtitleIndex(currentTime) {
+    for (let i = 0; i < subtitles.length; i++) {
+        if (subtitles[i].start > currentTime) {
+            return i;
+        }
+    }
+    return subtitles.length - 1; // 如果没有找到，返回最后一个
+}
+
+// 查找上一个有字幕的位置
+function findPrevSubtitleIndex(currentTime) {
+    for (let i = subtitles.length - 1; i >= 0; i--) {
+        if (subtitles[i].end < currentTime) {
+            return i;
+        }
+    }
+    return 0; // 如果没有找到，返回第一个
+}
+
+// 根据当前时间找到应该显示的字幕索引
+function findCurrentSubtitleIndex(currentTime) {
+    for (let i = 0; i < subtitles.length; i++) {
+        if (currentTime >= subtitles[i].start && currentTime < subtitles[i].end) {
+            return i;
+        }
+    }
+    return -1; // 没有找到当前字幕
+}
+
 // 更新字幕显示（PC端优化）
 function updateSubtitle(currentTime) {
     if (subtitles.length === 0) {
@@ -1023,13 +1105,7 @@ function updateSubtitle(currentTime) {
     }
     
     // 查找当前时间对应的字幕
-    let foundIndex = -1;
-    for (let i = 0; i < subtitles.length; i++) {
-        if (currentTime >= subtitles[i].start && currentTime < subtitles[i].end) {
-            foundIndex = i;
-            break;
-        }
-    }
+    let foundIndex = findCurrentSubtitleIndex(currentTime);
     
     if (foundIndex !== -1) {
         const currentSubtitle = subtitles[foundIndex];
@@ -1073,6 +1149,9 @@ function handleSubtitleTextClick(e) {
             const word = e.target.getAttribute('data-word');
             const index = parseInt(e.target.getAttribute('data-index'));
             
+            // 复制单词到剪贴板
+            copyToClipboard(word);
+            
             pauseCurrentMedia();
             searchWordInPanel(word);
             
@@ -1094,6 +1173,9 @@ function handleSubtitleTextClick(e) {
             const text = e.target.getAttribute('data-sentence');
             const index = parseInt(e.target.getAttribute('data-index'));
             
+            // 复制句子到剪贴板
+            copyToClipboard(text);
+            
             pauseCurrentMedia();
             showJapaneseWordSegmentation(text);
             
@@ -1114,7 +1196,7 @@ function updateOriginalSentence(sentence, currentWord, currentLanguageMode = 'en
     words.forEach((word, index) => {
         const wordClass = appendedWords.includes(word) ? 'sentence-word highlight selectable-word' : 'sentence-word selectable-word';
 
-        // 英文模式加空格，日语模式不加
+        // 日语模式不加空格，英语模式加空格
         const space = currentLanguageMode === 'japanese' ? '' : '&nbsp;';
 
         clickableSentence += `<span class="${wordClass}" data-word="${word}" data-index="${index}">${word}</span>${space}`;
@@ -1134,6 +1216,9 @@ function handleSentenceWordClick(e) {
 
     const word = span.getAttribute('data-word');
     const index = parseInt(span.getAttribute('data-index'));
+
+    // 复制单词到剪贴板
+    copyToClipboard(word);
 
     // 单击词块 → 重置已选词，只保留当前点击词
     appendedWords = [word];
@@ -1258,8 +1343,17 @@ toggleVideoSubtitlesBtn.addEventListener('click', () => {
 prevSentenceBtn.addEventListener('click', () => {
     if (subtitles.length === 0) return;
     
-    let targetIndex = currentSubtitleIndex - 1;
-    if (targetIndex < 0) targetIndex = 0;
+    let targetIndex;
+    const currentTime = currentMediaType === 'video' ? videoPlayer.currentTime : audioElement.currentTime;
+    
+    if (currentSubtitleIndex >= 0) {
+        // 如果当前有字幕，跳转到前一个字幕
+        targetIndex = currentSubtitleIndex - 1;
+        if (targetIndex < 0) targetIndex = 0;
+    } else {
+        // 如果当前没有字幕，查找前一个有字幕的位置
+        targetIndex = findPrevSubtitleIndex(currentTime);
+    }
     
     jumpToSubtitle(targetIndex);
 });
@@ -1268,8 +1362,17 @@ prevSentenceBtn.addEventListener('click', () => {
 nextSentenceBtn.addEventListener('click', () => {
     if (subtitles.length === 0) return;
     
-    let targetIndex = currentSubtitleIndex + 1;
-    if (targetIndex >= subtitles.length) targetIndex = subtitles.length - 1;
+    let targetIndex;
+    const currentTime = currentMediaType === 'video' ? videoPlayer.currentTime : audioElement.currentTime;
+    
+    if (currentSubtitleIndex >= 0) {
+        // 如果当前有字幕，跳转到下一个字幕
+        targetIndex = currentSubtitleIndex + 1;
+        if (targetIndex >= subtitles.length) targetIndex = subtitles.length - 1;
+    } else {
+        // 如果当前没有字幕，查找下一个有字幕的位置
+        targetIndex = findNextSubtitleIndex(currentTime);
+    }
     
     jumpToSubtitle(targetIndex);
 });
@@ -1326,12 +1429,26 @@ function openSubtitleListPanel() {
     panelOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
     
-    // 确保当前字幕项在可视区域内
-    if (currentSubtitleIndex >= 0) {
-        const activeItem = subtitleList.querySelector(`.subtitle-item:nth-child(${currentSubtitleIndex + 1})`);
-        if (activeItem) {
+    // 根据当前播放时间找到应该显示的字幕并定位
+    const currentTime = currentMediaType === 'video' ? videoPlayer.currentTime : audioElement.currentTime;
+    let targetIndex = findCurrentSubtitleIndex(currentTime);
+    
+    // 如果没有当前字幕，找下一个字幕
+    if (targetIndex === -1) {
+        targetIndex = findNextSubtitleIndex(currentTime);
+    }
+    
+    // 如果找到了字幕，定位到该字幕
+    if (targetIndex >= 0) {
+        const targetItem = subtitleList.querySelector(`.subtitle-item:nth-child(${targetIndex + 1})`);
+        if (targetItem) {
             setTimeout(() => {
-                activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // 高亮显示
+                subtitleList.querySelectorAll('.subtitle-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                targetItem.classList.add('active');
             }, 100);
         }
     }
@@ -1357,23 +1474,33 @@ function closeSubtitleListPanelFunc() {
 
 closeSubtitleListPanel.addEventListener('click', closeSubtitleListPanelFunc);
 
-// 追加词汇功能
+// 追加词汇功能 - 修复版
 appendWordBtn.addEventListener('click', () => {
     const sentenceSpans = originalSentence.querySelectorAll('.sentence-word');
     if (!sentenceSpans.length) return;
 
-    currentWordIndex++;
-    if (currentWordIndex >= sentenceSpans.length) currentWordIndex = sentenceSpans.length - 1;
+    // 如果已经是最后一个词，不再追加
+    if (currentWordIndex >= sentenceSpans.length - 1) {
+        return;
+    }
 
+    currentWordIndex++;
     const currentSpan = sentenceSpans[currentWordIndex];
     const word = currentSpan.getAttribute('data-word');
 
+    // 英语模式下在非第一个词前添加空格
+    if (currentLanguageMode === 'english' && appendedWords.length > 0) {
+        panelSearchInput.value += ' ' + word;
+    } else {
+        panelSearchInput.value += word;
+    }
+    
     appendedWords.push(word);
-    panelSearchInput.value = appendedWords.join('');
 
-    // 高亮已追加词块
+    // 更新高亮 - 确保高亮与追加词汇一致
     sentenceSpans.forEach((span, idx) => {
-        span.classList.toggle('highlight', idx <= currentWordIndex);
+        const spanWord = span.getAttribute('data-word');
+        span.classList.toggle('highlight', appendedWords.includes(spanWord) && idx <= currentWordIndex);
     });
 
     // 触发搜索
@@ -1660,7 +1787,7 @@ audioFieldSelect.addEventListener('change', saveConfig);
 imageFieldSelect.addEventListener('change', saveConfig);
 
 // 修复：简化Anki添加流程，移除异步等待
-addToAnkiBtn.addEventListener('click', () => {
+addToAnkiBtn.addEventListener('click', async () => {
     if (isProcessingAnki) return;
     
     if (!ankiConnected) {
@@ -1700,49 +1827,56 @@ addToAnkiBtn.addEventListener('click', () => {
     isProcessingAnki = true;
     addToAnkiBtn.disabled = true;
     
-    // 立即关闭面板并恢复播放
-    closeDictionaryPanel();
+    // 显示处理中状态
+    addToAnkiBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
     
-    // 使用setTimeout避免阻塞UI
-    setTimeout(() => {
-        processAnkiCard(word, definition)
-            .then(() => {
-                console.log('卡片添加成功');
-            })
-            .catch(error => {
-                console.error('添加卡片失败:', error);
-                alert('添加卡片失败: ' + error.message);
-            })
-            .finally(() => {
-                // 重置处理状态
-                isProcessingAnki = false;
-                addToAnkiBtn.disabled = false;
-                
-                // 重置表单
-                customDefinitionInput.value = '';
-                panelSearchInput.value = '';
-                panelDictionaryResult.innerHTML = '查询结果将显示在这里...';
-            });
-    }, 100);
+    try {
+        // 处理Anki卡片
+        await processAnkiCard(word, definition);
+        console.log('卡片添加成功');
+        
+        // 重置表单
+        customDefinitionInput.value = '';
+        panelSearchInput.value = '';
+        panelDictionaryResult.innerHTML = '查询结果将显示在这里...';
+        
+        // 关闭面板
+        closeDictionaryPanel();
+        
+    } catch (error) {
+        console.error('添加卡片失败:', error);
+        alert('添加卡片失败: ' + error.message);
+    } finally {
+        // 重置处理状态
+        isProcessingAnki = false;
+        addToAnkiBtn.disabled = false;
+        addToAnkiBtn.innerHTML = '<i class="fas fa-plus"></i> 添加到 Anki';
+    }
 });
 
 // 修复音频截取问题 - 使用之前成功的代码
 async function processAnkiCard(word, definition) {
     console.log('audioBuffer', audioBuffer, 'audioContext', audioContext, 'currentSubtitleIndex', currentSubtitleIndex);
 
+    // 清理句子中的编号
+    let cleanSentence = currentSentence;
+    if (cleanSentence) {
+        cleanSentence = cleanSubtitleText(cleanSentence);
+    }
+
     const note = {
         deckName: deckSelect.value,
         modelName: modelSelect.value,
         fields: {
             [wordFieldSelect.value]: word,
-            [sentenceFieldSelect.value]: currentSentence, // 直接使用句子，不加编号
+            [sentenceFieldSelect.value]: cleanSentence, // 使用清理后的句子，不加编号
             [definitionFieldSelect.value]: definition
         },
         options: { allowDuplicate: false },
         tags: ['media-player']
     };
 
-    // 自动截取当前单词所在字幕音频
+    // 自动截取当前单词所在字幕音频 - 从字幕开始到结束
     if (audioBuffer && currentSubtitleIndex >= 0) {
         try {
             const audioBlob = await generateAudioClip(currentSubtitleIndex);
@@ -1792,7 +1926,7 @@ function generateImageFileName(word) {
     return fileName;
 }
 
-// 自动截取当前字幕的音频片段
+// 自动截取当前字幕的音频片段 - 从字幕开始到结束
 async function processAudioFile(word, audioBlob) {
     try {
         const audioFileName = generateAudioFileName(word);
@@ -1931,7 +2065,7 @@ function bufferToWavBlob(buffer) {
     return new Blob([view], { type: 'audio/wav' });
 }
 
-// 生成当前句子的音频片段
+// 生成当前句子的音频片段 - 从字幕开始到结束
 async function generateAudioClip(subtitleIndex) {
     if (!audioBuffer) throw new Error('audioBuffer 未加载');
 
@@ -2285,7 +2419,7 @@ window.mediaPlayer = {
     })
 };
 
-// 添加CSS样式来优化PC端字幕划取
+// 添加CSS样式来优化PC端和移动端体验
 const style = document.createElement('style');
 style.textContent = `
     /* 优化PC端字幕划取 */
@@ -2295,10 +2429,11 @@ style.textContent = `
         -webkit-user-select: text;
         -moz-user-select: text;
         -ms-user-select: text;
-        padding: 2px 1px;
+        padding: ${isMobileDevice ? '6px 3px' : '2px 1px'};
         margin: 0 1px;
         border-radius: 2px;
         transition: background-color 0.2s;
+        ${isMobileDevice ? 'font-size: 1.1em; min-height: 24px; display: inline-block;' : ''}
     }
     
     .selectable-word:hover, .sentence-word:hover {
@@ -2339,6 +2474,7 @@ style.textContent = `
         border-radius: 4px;
         transition: all 0.3s;
         line-height: 1.5;
+        ${isMobileDevice ? 'font-size: 1.1em; padding: 12px 16px;' : ''}
     }
     
     .audio-subtitle-item.active {
@@ -2359,6 +2495,7 @@ style.textContent = `
         background: rgba(0, 0, 0, 0.7);
         border-radius: 8px;
         margin: 10px 0;
+        ${isMobileDevice ? 'font-size: 1.1em; padding: 12px;' : ''}
     }
     
     /* 音频字幕容器，确保当前字幕可见 */
@@ -2366,6 +2503,88 @@ style.textContent = `
         max-height: 300px;
         overflow-y: auto;
         scroll-behavior: smooth;
+    }
+    
+    /* 移动端优化 */
+    @media (max-width: 768px) {
+        .word, .sentence-word {
+            min-height: 28px;
+            line-height: 28px;
+            padding: 0 4px;
+        }
+        
+        .subtitle-item {
+            padding: 12px 8px;
+            font-size: 1.1em;
+        }
+        
+        .dictionary-panel {
+            padding: 16px;
+        }
+        
+        .tab-button {
+            padding: 10px 12px;
+            font-size: 0.9em;
+        }
+        
+        .panel-controls {
+            flex-wrap: wrap;
+        }
+        
+        .panel-controls button {
+            margin: 4px;
+            flex: 1;
+            min-width: 120px;
+        }
+    }
+    
+    /* 加载状态 */
+    .loading-state {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        color: #666;
+    }
+    
+    .loading-state .fa-spinner {
+        margin-right: 8px;
+    }
+    
+    /* 优化按钮点击效果 */
+    button {
+        transition: all 0.2s ease;
+    }
+    
+    button:active {
+        transform: scale(0.98);
+    }
+    
+    /* 优化查词插件识别 */
+    .word, .sentence-word {
+        word-break: keep-all;
+        white-space: nowrap;
+    }
+    
+    /* 日语分词不加间隔 */
+    .japanese-sentence {
+        word-spacing: 0;
+        letter-spacing: 0;
+    }
+    
+    /* 移动端触摸优化 */
+    @media (hover: none) and (pointer: coarse) {
+        .selectable-word, .sentence-word, .audio-subtitle-item {
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+        }
+        
+        .word {
+            min-height: 32px;
+            line-height: 32px;
+        }
     }
 `;
 document.head.appendChild(style);
