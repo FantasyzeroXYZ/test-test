@@ -841,7 +841,7 @@ function handleSubtitleClick(e, text, index) {
             const word = e.target.getAttribute('data-word');
             
             // 复制单词到剪贴板
-            copyToClipboard(word);
+            // copyToClipboard(word);
             
             // 点击单词时暂停播放
             pauseCurrentMedia();
@@ -860,7 +860,7 @@ function handleSubtitleClick(e, text, index) {
         // 日语模式：点击句子，显示分词结果
         if (e.target.classList.contains('japanese-sentence')) {
             // 复制句子到剪贴板
-            copyToClipboard(text);
+            // copyToClipboard(text);
             
             // 点击句子时暂停播放
             pauseCurrentMedia();
@@ -875,22 +875,22 @@ function handleSubtitleClick(e, text, index) {
 }
 
 // 复制文本到剪贴板
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        // 显示复制成功提示
-        showStatusMessage(`"${text}" 已复制到剪贴板`);
-    }).catch(err => {
-        console.error('复制到剪贴板失败:', err);
-        // 备用方案
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        showStatusMessage(`"${text}" 已复制到剪贴板`);
-    });
-}
+// function copyToClipboard(text) {
+//     navigator.clipboard.writeText(text).then(() => {
+//         // 显示复制成功提示
+//         showStatusMessage(`"${text}" 已复制到剪贴板`);
+//     }).catch(err => {
+//         console.error('复制到剪贴板失败:', err);
+//         // 备用方案
+//         const textArea = document.createElement('textarea');
+//         textArea.value = text;
+//         document.body.appendChild(textArea);
+//         textArea.select();
+//         document.execCommand('copy');
+//         document.body.removeChild(textArea);
+//         showStatusMessage(`"${text}" 已复制到剪贴板`);
+//     });
+// }
 
 // 暂停当前媒体播放
 function pauseCurrentMedia() {
@@ -932,7 +932,7 @@ async function showJapaneseWordSegmentation(sentence, currentWord = '') {
                 panelSearchInput.value = word;
                 
                 // 复制单词到剪贴板
-                copyToClipboard(word);
+                // copyToClipboard(word);
                 
                 if (window.japaneseWordClicked) {
                     window.japaneseWordClicked(word, index);
@@ -1153,7 +1153,7 @@ function handleSubtitleTextClick(e) {
             const index = parseInt(e.target.getAttribute('data-index'));
             
             // 复制单词到剪贴板
-            copyToClipboard(word);
+            // copyToClipboard(word);
             
             pauseCurrentMedia();
             searchWordInPanel(word);
@@ -1177,7 +1177,7 @@ function handleSubtitleTextClick(e) {
             const index = parseInt(e.target.getAttribute('data-index'));
             
             // 复制句子到剪贴板
-            copyToClipboard(text);
+            // copyToClipboard(text);
             
             pauseCurrentMedia();
             showJapaneseWordSegmentation(text);
@@ -1221,7 +1221,7 @@ function handleSentenceWordClick(e) {
     const index = parseInt(span.getAttribute('data-index'));
 
     // 复制单词到剪贴板
-    copyToClipboard(word);
+    // copyToClipboard(word);
 
     // 单击词块 → 重置已选词，只保留当前点击词
     appendedWords = [word];
