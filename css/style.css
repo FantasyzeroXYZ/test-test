@@ -1339,6 +1339,8 @@ button:active {
     .subtitle-text {
         font-size: 1.1em;
         padding: 12px;
+        background: transparent !important; /* 移除黑框背景 */
+        box-shadow: none !important; /* 移除阴影 */
     }
     
     .audio-subtitle-item {
@@ -1375,6 +1377,8 @@ button:active {
         line-height: 1.3;
         padding: 4px 8px;
         margin: 2px 0;
+        background: rgba(0, 0, 0, 0.7); /* 视频字幕保留半透明背景 */
+        border-radius: 4px;
     }
     
     /* 修复音频滚动字幕 */
@@ -1391,6 +1395,9 @@ button:active {
         line-height: 1.4;
         padding: 10px 8px;
         text-align: center;
+        background: rgba(0, 0, 0, 0.3); /* 音频字幕保留半透明背景 */
+        border-radius: 4px;
+        margin: 2px 0;
     }
     
     /* 确保字幕中的单词水平排列 */
@@ -1413,12 +1420,16 @@ button:active {
         letter-spacing: normal !important;
     }
     
-    /* 优化字幕显示区域布局 */
+    /* 优化字幕显示区域布局 - 移除内部黑框 */
     .subtitle-display {
         min-height: 80px;
         display: flex;
         align-items: center;
         justify-content: center;
+        background: rgba(30, 30, 40, 0.9); /* 只保留外部灰框 */
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     }
 }
 
@@ -1519,6 +1530,20 @@ button:active {
     /* 修复：配置设置PC端始终可见 */
     .config-section, .auto-config-section {
         background: rgba(0, 0, 0, 0.5);
+    }
+
+    /* PC端也移除字幕的双重边框 */
+    .subtitle-text {
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 10px;
+    }
+    
+    .subtitle-display {
+        background: rgba(30, 30, 40, 0.9);
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     }
 }
 
@@ -1672,6 +1697,11 @@ button:active {
         padding: 1px 2px !important;
         font-size: 1rem;
     }
+
+    .subtitle-display {
+        padding: 10px;
+        min-height: 70px;
+    }
 }
 
 @media (max-width: 360px) {
@@ -1696,6 +1726,11 @@ button:active {
     
     .panel-anki-btn {
         width: 100%;
+    }
+
+    .subtitle-display {
+        padding: 8px;
+        min-height: 60px;
     }
 }
 
@@ -1735,4 +1770,10 @@ button:active {
     display: inline;
     writing-mode: horizontal-tb;
     text-orientation: mixed;
+}
+
+/* 全局移除字幕文本的内部黑框 */
+.subtitle-text {
+    background: transparent !important;
+    box-shadow: none !important;
 }
