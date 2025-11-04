@@ -1789,24 +1789,27 @@ definitionFieldSelect.addEventListener('change', saveConfig);
 audioFieldSelect.addEventListener('change', saveConfig);
 imageFieldSelect.addEventListener('change', saveConfig);
 
+// 页面加载时保存原始按钮 HTML
+const originalAddToAnkiHTML = addToAnkiBtn.innerHTML;
+
 // 修复：简化Anki添加流程，移除异步等待
 addToAnkiBtn.addEventListener('click', async () => {
     if (isProcessingAnki) return;
-    
+
     if (!ankiConnected) {
         alert('请先连接Anki!');
         return;
     }
-    
+
     const word = panelSearchInput.value.trim();
     if (!word) {
         alert('请输入要添加的单词!');
         return;
     }
-    
+
     // 获取词典内容
     let definition = '';
-    
+
     // 根据当前激活的标签页获取释义
     if (activeTab === 'dictionary-tab') {
         // 从词典释义标签页获取内容
@@ -1820,40 +1823,41 @@ addToAnkiBtn.addEventListener('click', async () => {
         // 从自定义释义标签页获取内容
         definition = customDefinitionInput.value.trim();
     }
-    
+
     if (!definition) {
         alert('请提供单词释义!');
         return;
     }
-    
+
     // 防止重复点击
     isProcessingAnki = true;
     addToAnkiBtn.disabled = true;
-    
+
     // 显示处理中状态
-    addToAnkiBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
-    
+    addToAnkiBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
     try {
         // 处理Anki卡片
         await processAnkiCard(word, definition);
         console.log('卡片添加成功');
-        
+
         // 重置表单
         customDefinitionInput.value = '';
         panelSearchInput.value = '';
         panelDictionaryResult.innerHTML = '查询结果将显示在这里...';
-        
+
         // 关闭面板
         closeDictionaryPanel();
-        
+
     } catch (error) {
         console.error('添加卡片失败:', error);
         alert('添加卡片失败: ' + error.message);
+
     } finally {
-        // 重置处理状态
+        // 重置处理状态，恢复按钮原始 HTML
         isProcessingAnki = false;
         addToAnkiBtn.disabled = false;
-        addToAnkiBtn.innerHTML = '<i class="fas fa-plus"></i> 添加到 Anki';
+        addToAnkiBtn.innerHTML = originalAddToAnkiHTML;
     }
 });
 
