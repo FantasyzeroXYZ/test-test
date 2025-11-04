@@ -117,7 +117,7 @@ async function initKuromoji() {
         window.kuromoji.builder({ dicPath: "./kuromoji/dict/" }).build(function(err, tk) {
             if (err) { reject(err); return; }
             tokenizer = tk; // 保存实例
-            console.log("kuromoji 初始化成功 ✅");
+            // console.log("kuromoji 初始化成功 ✅"); // 调试输出
             resolve(tk);
         });
     });
@@ -343,7 +343,7 @@ async function loadAudioBuffer(file) {
     try {
         // 尝试解码音频（即便是视频，也可能成功提取音轨）
         audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-        console.log("✅ 音频缓冲加载成功:", audioBuffer);
+        // console.log("✅ 音频缓冲加载成功:", audioBuffer); // 调试输出
     } catch (err) {
         console.warn("⚠ 无法直接从文件提取音频:", err);
         audioBuffer = null;
@@ -2383,10 +2383,10 @@ async function init() {
             return;
         }
 
-        // 测试分词
-        const sentence = "すもももももももものうち";
-        const tokens = tokenizer.tokenize(sentence);
-        console.log(tokens.map(t => t.surface_form).join(" | "));
+        // 调试分词
+        // const sentence = "すもももももももものうち";  
+        // const tokens = tokenizer.tokenize(sentence);
+        // console.log(tokens.map(t => t.surface_form).join(" | "));
     } catch (err) {
         console.error("初始化失败:", err);
     }
@@ -2422,4 +2422,4 @@ window.mediaPlayer = {
     })
 };
 
-document.head.appendChild(style);
+// document.head.appendChild(style);
