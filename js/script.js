@@ -85,7 +85,7 @@ let audioSubtitlesVisible = false;
 let currentHighlightedWord = null;
 let currentWord = '';
 let currentSentence = '';
-let currentSubtitleIndex = 0; // 当前字幕索引
+let currentSubtitleIndex = -1; // 当前字幕索引
 let currentMediaFile = null;
 let currentMediaType = 'video'; // 'video' 或 'audio'
 let currentLanguageMode = 'english'; // 'english' 或 'japanese'
@@ -166,6 +166,7 @@ function loadConfig() {
             if (config.mediaType) {
                 currentMediaType = config.mediaType;
                 updateMediaModeButton();
+                updateMediaDisplay();
             }
         } catch (e) {
             console.error('加载配置失败:', e);
@@ -193,6 +194,58 @@ function updateImportButton() {
     mediaImportBtn.innerHTML = currentMediaType === 'video' ? 
         '<i class="fas fa-file-video"></i> 视频' : 
         '<i class="fas fa-file-audio"></i> 音频';
+}
+
+// 更新媒体显示
+function updateMediaDisplay() {
+    if (currentMediaType === 'video') {
+        videoPlayerContainer.style.display = 'block';
+        audioPlayerContainer.style.display = 'none';
+    } else {
+        videoPlayerContainer.style.display = 'none';
+        audioPlayerContainer.style.display = 'block';
+    }
+    updateControlButtons();
+}
+
+// 清除当前媒体和字幕
+function clearCurrentMedia() {
+    // 停止播放
+    if (currentMediaType === 'video') {
+        videoPlayer.pause();
+        videoPlayer.src = '';
+    } else if (audioElement) {
+        audioElement.pause();
+        audioElement.src = '';
+        audioPlayPauseBtn.textContent = '▶';
+        audioPlayPauseBtn.classList.remove('active');
+    }
+    
+    // 清除文件引用
+    currentMediaFile = null;
+    videoFileInput.value = '';
+    audioFileInput.value = '';
+    
+    // 重置轨道信息
+    trackTitle.textContent = '未选择媒体文件';
+    trackDescription.textContent = '请导入媒体文件开始学习';
+    mediaIcon.className = 'fas fa-file';
+    
+    // 清除字幕
+    subtitles = [];
+    subtitleFileInput.value = '';
+    subtitleText.innerHTML = "无字幕";
+    videoSubtitles.innerHTML = "";
+    updateSubtitleList();
+    updateAudioSubtitles();
+    
+    // 重置状态
+    currentSubtitleIndex = -1;
+    currentWord = '';
+    currentSentence = '';
+    appendedWords = [];
+    currentWordIndex = -1;
+    panelSearchInput.value = '';
 }
 
 // 文件选择事件处理
@@ -223,15 +276,15 @@ videoFileInput.addEventListener('change', async function(e) {
     if (audioElement && !audioElement.paused) {
         audioElement.pause();
         audioPlayPauseBtn.textContent = '▶';
+        audioPlayPauseBtn.classList.remove('active');
     }
 
     // 创建视频URL并设置播放器
     const fileURL = URL.createObjectURL(file);
     videoPlayer.src = fileURL;
 
-    // 切换视频模式
+    // 切换到视频模式
     switchToVideoMode();
-    videoPlayerContainer.classList.add('active');
 
     // 重置字幕
     subtitles = [];
@@ -239,55 +292,9 @@ videoFileInput.addEventListener('change', async function(e) {
     videoSubtitles.innerHTML = "";
     updateSubtitleList();
 
-    // 尝试加载音频缓冲（如果视频中有音轨）
+    // 尝试加载音频缓冲
     await loadAudioBuffer(file);
 });
-        
-async function loadAudioFile(file) {
-    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-    try {
-        if (file.type.startsWith('audio/')) {
-            const arrayBuffer = await file.arrayBuffer();
-            audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            console.log('音频文件加载完成', audioBuffer);
-        } else if (file.type.startsWith('video/')) {
-            const arrayBuffer = await extractAudioFromVideoBlob(file);
-            audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            console.log('视频音轨提取完成', audioBuffer);
-        } else {
-            throw new Error('不支持的媒体类型');
-        }
-    } catch (e) {
-        console.error('加载音频失败:', e);
-        audioBuffer = null;
-    }
-}
-
-async function extractAudioFromVideoBlob(videoBlob) {
-    return new Promise((resolve, reject) => {
-        const video = document.createElement('video');
-        video.src = URL.createObjectURL(videoBlob);
-        video.muted = true;
-        video.play();
-
-        video.onloadedmetadata = () => {
-            const stream = video.captureStream();
-            if (stream.getAudioTracks().length === 0) return reject('视频没有音轨');
-
-            const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-            const chunks = [];
-            recorder.ondataavailable = e => chunks.push(e.data);
-            recorder.onstop = async () => {
-                const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-                resolve(await audioBlob.arrayBuffer());
-            };
-            recorder.start();
-            setTimeout(() => recorder.stop(), (video.duration || 1) * 1000); 
-        };
-        video.onerror = e => reject(e);
-    });
-}
 
 // 🎵 音频文件加载
 audioFileInput.addEventListener('change', async function(e) {
@@ -300,24 +307,59 @@ audioFileInput.addEventListener('change', async function(e) {
     trackDescription.textContent = `文件大小: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
     mediaIcon.className = 'fas fa-music';
 
+    // 暂停视频播放器（如果正在播放）
+    if (!videoPlayer.paused) {
+        videoPlayer.pause();
+    }
+
     // 创建音频URL并设置播放器
     const fileURL = URL.createObjectURL(file);
+    if (!audioElement) {
+        audioElement = new Audio();
+        initAudioControls();
+    }
     audioElement.src = fileURL;
 
-    // 关闭视频模式
-    videoPlayerContainer.classList.remove('active');
+    // 切换到音频模式
+    switchToAudioMode();
+
+    // 重置字幕
+    subtitles = [];
+    subtitleText.innerHTML = "无字幕";
+    updateSubtitleList();
 
     // 加载音频缓冲
     await loadAudioBuffer(file);
 });
-        
+
+// 自适应加载音频缓冲（无论是音频或视频）
+async function loadAudioBuffer(file) {
+    const ctx = getAudioContext();
+
+    // 读取文件为 ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+
+    try {
+        // 尝试解码音频（即便是视频，也可能成功提取音轨）
+        audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        console.log("✅ 音频缓冲加载成功:", audioBuffer);
+    } catch (err) {
+        console.warn("⚠ 无法直接从文件提取音频:", err);
+        audioBuffer = null;
+    }
+}
+
 // 初始化音频控件
 function initAudioControls() {
+    if (!audioElement) return;
+
     // 更新音频时长
     audioElement.addEventListener('loadedmetadata', () => {
-        audioDuration.textContent = formatTime(audioElement.duration);
-        updateProgressThumb();
-        updateVolumeThumb();
+        if (audioElement.duration) {
+            audioDuration.textContent = formatTime(audioElement.duration);
+            updateProgressThumb();
+            updateVolumeThumb();
+        }
     });
     
     // 播放/暂停按钮
@@ -359,12 +401,14 @@ function initAudioControls() {
     
     // 更新进度条和时间显示
     audioElement.addEventListener('timeupdate', () => {
-        const percent = (audioElement.currentTime / audioElement.duration) * 100;
-        audioProgressFilled.style.width = `${percent}%`;
-        audioCurrentTime.textContent = formatTime(audioElement.currentTime);
-        
-        if (!isDraggingProgress) {
-            updateProgressThumb();
+        if (audioElement.duration) {
+            const percent = (audioElement.currentTime / audioElement.duration) * 100;
+            audioProgressFilled.style.width = `${percent}%`;
+            audioCurrentTime.textContent = formatTime(audioElement.currentTime);
+            
+            if (!isDraggingProgress) {
+                updateProgressThumb();
+            }
         }
         
         // 更新音频字幕
@@ -452,13 +496,14 @@ function startDragVolume(e) {
 
 // 更新进度条滑块位置
 function updateProgressThumb() {
-    if (!audioElement.duration) return;
+    if (!audioElement || !audioElement.duration) return;
     const percent = (audioElement.currentTime / audioElement.duration) * 100;
     progressThumb.style.left = `${percent}%`;
 }
 
 // 更新音量滑块位置
 function updateVolumeThumb() {
+    if (!audioElement) return;
     const percent = audioElement.volume * 100;
     audioVolumeFilled.style.width = `${percent}%`;
     volumeThumb.style.left = `${percent}%`;
@@ -468,18 +513,16 @@ function updateVolumeThumb() {
 function switchToVideoMode() {
     currentMediaType = 'video';
     updateMediaModeButton();
-    videoPlayerContainer.classList.add('active');
-    audioPlayerContainer.classList.remove('active');
-    updateControlButtons();
+    updateMediaDisplay();
+    saveConfig();
 }
 
 // 切换到音频模式
 function switchToAudioMode() {
     currentMediaType = 'audio';
     updateMediaModeButton();
-    audioPlayerContainer.classList.add('active');
-    videoPlayerContainer.classList.remove('active');
-    updateControlButtons();
+    updateMediaDisplay();
+    saveConfig();
 }
 
 // 更新控制按钮显示
@@ -490,11 +533,19 @@ function updateControlButtons() {
     const audioControls = [toggleAudioSubtitlesBtn];
     
     if (currentMediaType === 'video') {
-        videoControls.forEach(btn => btn.style.display = 'flex');
-        audioControls.forEach(btn => btn.style.display = 'none');
+        videoControls.forEach(btn => {
+            if (btn) btn.style.display = 'flex';
+        });
+        audioControls.forEach(btn => {
+            if (btn) btn.style.display = 'none';
+        });
     } else {
-        videoControls.forEach(btn => btn.style.display = 'none');
-        audioControls.forEach(btn => btn.style.display = 'flex');
+        videoControls.forEach(btn => {
+            if (btn) btn.style.display = 'none';
+        });
+        audioControls.forEach(btn => {
+            if (btn) btn.style.display = 'flex';
+        });
     }
 }
 
@@ -507,18 +558,13 @@ function toggleLanguageMode() {
 
 // 切换媒体模式
 function toggleMediaMode() {
+    // 清除当前媒体和字幕
+    clearCurrentMedia();
+    
     currentMediaType = currentMediaType === 'video' ? 'audio' : 'video';
     updateMediaModeButton();
+    updateMediaDisplay();
     saveConfig();
-    
-    // 如果已有媒体文件，切换到对应的播放器
-    if (currentMediaFile) {
-        if (currentMediaType === 'video') {
-            switchToVideoMode();
-        } else {
-            switchToAudioMode();
-        }
-    }
 }
 
 // 模式切换事件
@@ -537,23 +583,6 @@ toggleAudioSubtitlesBtn.addEventListener('click', () => {
     }
 });
 
-// 自适应加载音频缓冲（无论是音频或视频）
-async function loadAudioBuffer(file) {
-    const ctx = getAudioContext();
-
-    // 读取文件为 ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
-
-    try {
-        // 尝试解码音频（即便是视频，也可能成功提取音轨）
-        audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-        console.log("✅ 音频缓冲加载成功:", audioBuffer);
-    } catch (err) {
-        console.warn("⚠ 无法直接从文件提取音频:", err);
-        audioBuffer = null;
-    }
-}
-        
 // 字幕文件选择处理
 subtitleFileInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
@@ -567,18 +596,35 @@ subtitleFileInput.addEventListener('change', function(e) {
     }
 });
 
-// 解析字幕文件（简单SRT格式解析）
+// 解析字幕文件（支持SRT和VTT格式）
 function parseSubtitle(content) {
     subtitles = [];
     
-    // 简单的SRT解析器
+    // 检测格式并解析
+    if (content.includes('WEBVTT') || content.includes('-->')) {
+        parseVTTSubtitle(content);
+    } else {
+        parseSRTSubtitle(content);
+    }
+    
+    // 按开始时间排序
+    subtitles.sort((a, b) => a.start - b.start);
+    
+    // 更新字幕列表
+    updateSubtitleList();
+    updateAudioSubtitles();
+    
+    // 更新初始字幕显示
+    updateSubtitle(0);
+}
+
+// 解析SRT字幕
+function parseSRTSubtitle(content) {
     const blocks = content.split(/\n\s*\n/);
     
     blocks.forEach(block => {
         const lines = block.trim().split('\n');
         if (lines.length >= 3) {
-            // 第一行是序号，跳过
-            // 第二行是时间轴
             const timeLine = lines[1];
             const timeMatch = timeLine.match(/(\d+):(\d+):(\d+),(\d+)\s*-->\s*(\d+):(\d+):(\d+),(\d+)/);
             
@@ -595,29 +641,59 @@ function parseSubtitle(content) {
                     parseInt(timeMatch[7]) + 
                     parseInt(timeMatch[8]) / 1000;
                 
-                // 第三行及之后是字幕文本
                 const text = lines.slice(2).join(' ').trim();
                 
                 if (text) {
                     subtitles.push({
                         start: startTime,
                         end: endTime,
-                        text: text
+                        text: text.replace(/<[^>]*>/g, '') // 移除HTML标签
                     });
                 }
             }
         }
     });
+}
+
+// 解析VTT字幕
+function parseVTTSubtitle(content) {
+    const lines = content.split('\n');
+    let currentSubtitle = null;
     
-    // 按开始时间排序
-    subtitles.sort((a, b) => a.start - b.start);
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        if (line.includes('-->')) {
+            if (currentSubtitle) {
+                subtitles.push(currentSubtitle);
+            }
+            
+            const timeMatch = line.match(/(\d+):(\d+):(\d+)[.,](\d+)\s*-->\s*(\d+):(\d+):(\d+)[.,](\d+)/);
+            if (timeMatch) {
+                currentSubtitle = {
+                    start: parseInt(timeMatch[1]) * 3600 + 
+                           parseInt(timeMatch[2]) * 60 + 
+                           parseInt(timeMatch[3]) + 
+                           parseInt(timeMatch[4]) / 1000,
+                    end: parseInt(timeMatch[5]) * 3600 + 
+                         parseInt(timeMatch[6]) * 60 + 
+                         parseInt(timeMatch[7]) + 
+                         parseInt(timeMatch[8]) / 1000,
+                    text: ''
+                };
+            }
+        } else if (currentSubtitle && line && !line.includes('WEBVTT') && !line.includes('NOTE')) {
+            if (currentSubtitle.text) {
+                currentSubtitle.text += ' ' + line;
+            } else {
+                currentSubtitle.text = line;
+            }
+        }
+    }
     
-    // 更新字幕列表
-    updateSubtitleList();
-    updateAudioSubtitles();
-    
-    // 更新初始字幕显示
-    updateSubtitle(0);
+    if (currentSubtitle && currentSubtitle.text) {
+        subtitles.push(currentSubtitle);
+    }
 }
 
 // 更新字幕列表
@@ -635,16 +711,13 @@ function updateSubtitleList() {
     subtitles.forEach((subtitle, index) => {
         const listItem = document.createElement('li');
         listItem.className = 'subtitle-item';
-        listItem.textContent = `${formatTime(subtitle.start)} - ${formatTime(subtitle.end)}: ${subtitle.text}`;
+        listItem.innerHTML = `
+            <div class="subtitle-time">${formatTime(subtitle.start)} - ${formatTime(subtitle.end)}</div>
+            <div class="subtitle-content">${subtitle.text}</div>
+        `;
         listItem.addEventListener('click', () => {
             // 跳转到该字幕开始时间
-            if (currentMediaType === 'video') {
-                videoPlayer.currentTime = subtitle.start;
-            } else {
-                audioElement.currentTime = subtitle.start;
-            }
-            currentSubtitleIndex = index;
-            updateActiveSubtitleItem();
+            jumpToSubtitle(index);
             closeSubtitleListPanelFunc();
         });
         subtitleList.appendChild(listItem);
@@ -672,87 +745,110 @@ function updateAudioSubtitles() {
             subtitleItem.classList.add('active');
         }
         
-        // 根据语言模式创建可点击的内容
-        if (currentLanguageMode === 'english') {
-            // 英语模式：创建可点击的单词
-            const text = subtitle.text;
-            const wordRegex = /[a-zA-Z]+(?:[''’][a-zA-Z]+)*/g;
-            let lastIndex = 0;
-            let clickableWords = '';
-            
-            let match;
-            while ((match = wordRegex.exec(text)) !== null) {
-                // 添加匹配前的非单词部分
-                clickableWords += text.substring(lastIndex, match.index);
-                
-                // 添加可点击的单词
-                clickableWords += `<span class="word" data-word="${match[0]}">${match[0]}</span>`;
-                
-                lastIndex = match.index + match[0].length;
-            }
-            
-            // 添加剩余的非单词部分
-            clickableWords += text.substring(lastIndex);
-            
-            subtitleItem.innerHTML = clickableWords;
-        } else {
-            // 日语模式：显示原始文本，点击整个句子
-            subtitleItem.textContent = subtitle.text;
-        }
+        // 创建可点击的字幕内容
+        subtitleItem.innerHTML = createClickableSubtitleContent(subtitle.text, index);
         
         // 添加点击事件
         subtitleItem.addEventListener('click', (e) => {
-            if (currentLanguageMode === 'english') {
-                // 英语模式：点击单词查询
-                if (e.target.classList.contains('word')) {
-                    const word = e.target.getAttribute('data-word');
-                    
-                    // 点击单词时暂停播放
-                    if (currentMediaType === 'audio') {
-                        playerWasPlaying = !audioElement.paused;
-                        audioElement.pause();
-                    }
-                    
-                    // 查询单词并显示底部面板
-                    searchWordInPanel(word);
-                    
-                    // 记录当前单词和句子
-                    currentWord = word;
-                    if (currentSubtitleIndex >= 0) {
-                        currentSentence = subtitles[currentSubtitleIndex].text;
-                        
-                        // 更新原句显示
-                        updateOriginalSentence(currentSentence, word);
-                    }
-                }
-            } else {
-                // 日语模式：点击句子，显示分词结果
-                const sentence = subtitle.text;
-                
-                // 点击句子时暂停播放
-                if (currentMediaType === 'audio') {
-                    playerWasPlaying = !audioElement.paused;
-                    audioElement.pause();
-                }
-                
-                // 显示日语分词结果
-                showJapaneseWordSegmentation(sentence);
-                
-                // 记录当前句子
-                currentSentence = sentence;
-            }
+            handleSubtitleClick(e, subtitle.text, index);
         });
         
         audioSubtitles.appendChild(subtitleItem);
     });
     
-    // 滚动到当前字幕（但不强制滚动页面）
+    // 确保当前字幕在可视区域内
+    ensureCurrentSubtitleVisible();
+}
+
+// 确保当前字幕在音频字幕区域中可见
+function ensureCurrentSubtitleVisible() {
     if (currentSubtitleIndex >= 0) {
         const activeItem = audioSubtitles.children[currentSubtitleIndex];
         if (activeItem) {
-            // 使用平滑滚动，但不强制滚动整个页面
-            activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            // 使用平滑滚动，确保当前字幕在可视区域内
+            activeItem.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'nearest' 
+            });
         }
+    }
+}
+
+// 创建可点击的字幕内容（PC端友好）
+function createClickableSubtitleContent(text, index) {
+    if (currentLanguageMode === 'english') {
+        // 英语模式：创建可点击的单词
+        const wordRegex = /[a-zA-Z]+(?:[''’][a-zA-Z]+)*/g;
+        let lastIndex = 0;
+        let clickableWords = '';
+        
+        let match;
+        while ((match = wordRegex.exec(text)) !== null) {
+            // 添加匹配前的非单词部分
+            clickableWords += text.substring(lastIndex, match.index);
+            
+            // 添加可点击的单词（增加class以便划词插件识别）
+            clickableWords += `<span class="word selectable-word" data-word="${match[0]}" data-index="${index}">${match[0]}</span>`;
+            
+            lastIndex = match.index + match[0].length;
+        }
+        
+        // 添加剩余的非单词部分
+        clickableWords += text.substring(lastIndex);
+        
+        return clickableWords;
+    } else {
+        // 日语模式：显示可点击的分词
+        return `<span class="japanese-sentence selectable-text" data-sentence="${text}" data-index="${index}">${text}</span>`;
+    }
+}
+
+// 处理字幕点击事件
+function handleSubtitleClick(e, text, index) {
+    if (currentLanguageMode === 'english') {
+        // 英语模式：点击单词查询
+        if (e.target.classList.contains('word')) {
+            const word = e.target.getAttribute('data-word');
+            
+            // 点击单词时暂停播放
+            pauseCurrentMedia();
+            
+            // 查询单词并显示底部面板
+            searchWordInPanel(word);
+            
+            // 记录当前单词和句子
+            currentWord = word;
+            currentSentence = text;
+            
+            // 更新原句显示
+            updateOriginalSentence(currentSentence, word);
+        }
+    } else {
+        // 日语模式：点击句子，显示分词结果
+        if (e.target.classList.contains('japanese-sentence')) {
+            // 点击句子时暂停播放
+            pauseCurrentMedia();
+            
+            // 显示日语分词结果
+            showJapaneseWordSegmentation(text);
+            
+            // 记录当前句子
+            currentSentence = text;
+        }
+    }
+}
+
+// 暂停当前媒体播放
+function pauseCurrentMedia() {
+    if (currentMediaType === 'video') {
+        playerWasPlaying = !videoPlayer.paused;
+        videoPlayer.pause();
+    } else if (audioElement) {
+        playerWasPlaying = !audioElement.paused;
+        audioElement.pause();
+        audioPlayPauseBtn.textContent = '▶';
+        audioPlayPauseBtn.classList.remove('active');
     }
 }
 
@@ -892,6 +988,8 @@ function updateActiveSubtitleItem() {
     items.forEach((item, index) => {
         if (index === currentSubtitleIndex) {
             item.classList.add('active');
+            // 滚动到当前激活的字幕项
+            item.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
             item.classList.remove('active');
         }
@@ -910,12 +1008,13 @@ function updateActiveSubtitleItem() {
 
 // 格式化时间显示
 function formatTime(seconds) {
+    if (isNaN(seconds)) return '00:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-// 更新字幕显示
+// 更新字幕显示（PC端优化）
 function updateSubtitle(currentTime) {
     if (subtitles.length === 0) {
         subtitleText.innerHTML = "无字幕";
@@ -938,66 +1037,22 @@ function updateSubtitle(currentTime) {
         
         // 更新视频内字幕
         if (videoSubtitlesVisible && currentMediaType === 'video') {
-            videoSubtitles.innerHTML = `<span>${currentSubtitle.text}</span>`;
+            videoSubtitles.innerHTML = `<span class="video-subtitle-text selectable-text">${currentSubtitle.text}</span>`;
         } else {
             videoSubtitles.innerHTML = "";
         }
         
-        // 改进的字幕文本转换
+        // 更新底部字幕显示（PC端优化）
         const text = currentSubtitle.text;
-        
-        if (currentLanguageMode === 'english') {
-            // 英语模式：创建可点击的单词
-            const wordRegex = /[a-zA-Z]+(?:[''’][a-zA-Z]+)*/g;
-            let lastIndex = 0;
-            let clickableWords = '';
-            
-            let match;
-            while ((match = wordRegex.exec(text)) !== null) {
-                // 添加匹配前的非单词部分
-                clickableWords += text.substring(lastIndex, match.index);
-                
-                // 添加可点击的单词
-                clickableWords += `<span class="word" data-word="${match[0]}">${match[0]}</span>`;
-                
-                lastIndex = match.index + match[0].length;
-            }
-            
-            // 添加剩余的非单词部分
-            clickableWords += text.substring(lastIndex);
-            
-            subtitleText.innerHTML = clickableWords;
-            
-            // 修复：使用事件委托解决单词点击问题
-            subtitleText.removeEventListener('click', handleWordClick);
-            subtitleText.addEventListener('click', handleWordClick);
-        } else {
-            // 日语模式：显示原始文本
-            subtitleText.innerHTML = text;
-            
-            // 日语模式下点击整个句子
-            subtitleText.addEventListener('click', () => {
-                // 点击句子时暂停播放
-                if (currentMediaType === 'video') {
-                    playerWasPlaying = !videoPlayer.paused;
-                    videoPlayer.pause();
-                } else {
-                    playerWasPlaying = !audioElement.paused;
-                    audioElement.pause();
-                }
-                
-                // 显示日语分词结果
-                showJapaneseWordSegmentation(text);
-                
-                // 记录当前句子
-                currentSentence = text;
-            });
-        }
-        
+        subtitleText.innerHTML = createClickableSubtitleContent(text, foundIndex);
         subtitleText.style.opacity = '1';
         
+        // 添加点击事件委托
+        subtitleText.removeEventListener('click', handleSubtitleTextClick);
+        subtitleText.addEventListener('click', handleSubtitleTextClick);
+        
     } else {
-        // 不在任何字幕时间范围内，显示灰色状态
+        // 不在任何字幕时间范围内
         subtitleText.style.opacity = '0.5';
         videoSubtitles.innerHTML = "";
         currentSubtitleIndex = -1;
@@ -1011,42 +1066,43 @@ function updateSubtitle(currentTime) {
     }
 }
 
-// 修复：使用事件委托处理单词点击
-function handleWordClick(e) {
-    if (e.target.classList.contains('word')) {
-        const word = e.target.getAttribute('data-word');
-        
-        // 点击单词时暂停播放
-        if (currentMediaType === 'video') {
-            playerWasPlaying = !videoPlayer.paused;
-            videoPlayer.pause();
-        } else {
-            playerWasPlaying = !audioElement.paused;
-            audioElement.pause();
-        }
-        
-        // 查询单词并显示底部面板
-        searchWordInPanel(word);
-        
-        // 高亮显示选中的单词
-        if (currentHighlightedWord) {
-            currentHighlightedWord.classList.remove('highlight');
-        }
-        e.target.classList.add('highlight');
-        currentHighlightedWord = e.target;
-        
-        // 记录当前单词和句子
-        currentWord = word;
-        if (currentSubtitleIndex >= 0) {
-            currentSentence = subtitles[currentSubtitleIndex].text;
+// 处理字幕文本点击事件
+function handleSubtitleTextClick(e) {
+    if (currentLanguageMode === 'english') {
+        if (e.target.classList.contains('word')) {
+            const word = e.target.getAttribute('data-word');
+            const index = parseInt(e.target.getAttribute('data-index'));
             
-            // 更新原句显示
-            updateOriginalSentence(currentSentence, word);
+            pauseCurrentMedia();
+            searchWordInPanel(word);
+            
+            currentWord = word;
+            if (index >= 0 && index < subtitles.length) {
+                currentSentence = subtitles[index].text;
+                updateOriginalSentence(currentSentence, word);
+            }
+            
+            // 高亮显示选中的单词
+            if (currentHighlightedWord) {
+                currentHighlightedWord.classList.remove('highlight');
+            }
+            e.target.classList.add('highlight');
+            currentHighlightedWord = e.target;
+        }
+    } else {
+        if (e.target.classList.contains('japanese-sentence')) {
+            const text = e.target.getAttribute('data-sentence');
+            const index = parseInt(e.target.getAttribute('data-index'));
+            
+            pauseCurrentMedia();
+            showJapaneseWordSegmentation(text);
+            
+            currentSentence = text;
         }
     }
 }
 
-// 更新原句显示，使单词/分词可点击，增加点击时直接追加到 appendedWords
+// 更新原句显示（PC端优化）
 function updateOriginalSentence(sentence, currentWord, currentLanguageMode = 'english', japaneseWords = []) {
     let clickableSentence = '';
 
@@ -1056,7 +1112,7 @@ function updateOriginalSentence(sentence, currentWord, currentLanguageMode = 'en
         : sentence.match(/\S+/g) || []; // 英文或其他语言按空白分词
 
     words.forEach((word, index) => {
-        const wordClass = appendedWords.includes(word) ? 'sentence-word highlight' : 'sentence-word';
+        const wordClass = appendedWords.includes(word) ? 'sentence-word highlight selectable-word' : 'sentence-word selectable-word';
 
         // 英文模式加空格，日语模式不加
         const space = currentLanguageMode === 'japanese' ? '' : '&nbsp;';
@@ -1068,53 +1124,37 @@ function updateOriginalSentence(sentence, currentWord, currentLanguageMode = 'en
 
     // 点击词块立即搜索并高亮
     originalSentence.removeEventListener('click', handleSentenceWordClick);
-    // 点击句子词块立即搜索
-    originalSentence.addEventListener('click', (e) => {
-        const span = e.target.closest('.sentence-word');
-        if (!span) return;
-
-        const word = span.getAttribute('data-word');
-        const index = parseInt(span.getAttribute('data-index'));
-
-        // 单击词块 → 重置已选词，只保留当前点击词
-        appendedWords = [word];
-        currentWordIndex = index;
-        panelSearchInput.value = word;
-
-        // 更新高亮
-        originalSentence.querySelectorAll('.sentence-word').forEach((s) => {
-            s.classList.toggle('highlight', appendedWords.includes(s.getAttribute('data-word')));
-        });
-
-        // 立即触发词典搜索
-        if (currentLanguageMode === 'english') {
-            searchWordInPanel(word);
-        } else {
-            searchJapaneseWordInPanel(word);
-        }
-
-        // 如果当前激活标签页是网页查询，则自动加载网页
-        if (activeTab === 'web-tab') {
-            loadWebSearch(word);
-        }
-    });
+    originalSentence.addEventListener('click', handleSentenceWordClick);
 }
 
 // 处理原句中单词点击
 function handleSentenceWordClick(e) {
-    if (e.target.classList.contains('sentence-word')) {
-        const word = e.target.getAttribute('data-word');
-        panelSearchInput.value = word;
+    const span = e.target.closest('.sentence-word');
+    if (!span) return;
+
+    const word = span.getAttribute('data-word');
+    const index = parseInt(span.getAttribute('data-index'));
+
+    // 单击词块 → 重置已选词，只保留当前点击词
+    appendedWords = [word];
+    currentWordIndex = index;
+    panelSearchInput.value = word;
+
+    // 更新高亮
+    originalSentence.querySelectorAll('.sentence-word').forEach((s) => {
+        s.classList.toggle('highlight', appendedWords.includes(s.getAttribute('data-word')));
+    });
+
+    // 立即触发词典搜索
+    if (currentLanguageMode === 'english') {
         searchWordInPanel(word);
-        
-        // 高亮显示选中的单词
-        document.querySelectorAll('.sentence-word').forEach(w => {
-            w.classList.remove('highlight');
-        });
-        e.target.classList.add('highlight');
-        
-        // 更新当前单词
-        currentWord = word;
+    } else {
+        searchJapaneseWordInPanel(word);
+    }
+
+    // 如果当前激活标签页是网页查询，则自动加载网页
+    if (activeTab === 'web-tab') {
+        loadWebSearch(word);
     }
 }
 
@@ -1151,7 +1191,7 @@ async function searchWordInPanel(word) {
     }
 }
 
-// 显示单词数据在底部面板
+// 显示单词数据在底部面板（移除编号）
 function displayWordDataInPanel(wordData) {
     let html = '';
     
@@ -1170,7 +1210,7 @@ function displayWordDataInPanel(wordData) {
     
     html += `</div>`;
     
-    // 词义解释
+    // 词义解释（移除编号）
     if (wordData.meanings && wordData.meanings.length > 0) {
         wordData.meanings.forEach(meaning => {
             html += `<div class="meaning-section">`;
@@ -1179,7 +1219,7 @@ function displayWordDataInPanel(wordData) {
             if (meaning.definitions && meaning.definitions.length > 0) {
                 meaning.definitions.forEach((def, index) => {
                     if (index < 3) { // 只显示前三个定义
-                        html += `<div class="definition">${index + 1}. ${def.definition}</div>`;
+                        html += `<div class="definition">${def.definition}</div>`;
                         if (def.example) {
                             html += `<div class="example">例句: "${def.example}"</div>`;
                         }
@@ -1210,7 +1250,7 @@ toggleVideoSubtitlesBtn.addEventListener('click', () => {
     if (!videoSubtitlesVisible) {
         videoSubtitles.innerHTML = "";
     } else if (currentSubtitleIndex >= 0) {
-        videoSubtitles.innerHTML = `<span>${subtitles[currentSubtitleIndex].text}</span>`;
+        videoSubtitles.innerHTML = `<span class="video-subtitle-text selectable-text">${subtitles[currentSubtitleIndex].text}</span>`;
     }
 });
 
@@ -1221,13 +1261,7 @@ prevSentenceBtn.addEventListener('click', () => {
     let targetIndex = currentSubtitleIndex - 1;
     if (targetIndex < 0) targetIndex = 0;
     
-    if (currentMediaType === 'video') {
-        videoPlayer.currentTime = subtitles[targetIndex].start;
-    } else {
-        audioElement.currentTime = subtitles[targetIndex].start;
-    }
-    currentSubtitleIndex = targetIndex;
-    updateActiveSubtitleItem();
+    jumpToSubtitle(targetIndex);
 });
 
 // 下一句跳转
@@ -1237,14 +1271,21 @@ nextSentenceBtn.addEventListener('click', () => {
     let targetIndex = currentSubtitleIndex + 1;
     if (targetIndex >= subtitles.length) targetIndex = subtitles.length - 1;
     
-    if (currentMediaType === 'video') {
-        videoPlayer.currentTime = subtitles[targetIndex].start;
-    } else {
-        audioElement.currentTime = subtitles[targetIndex].start;
-    }
-    currentSubtitleIndex = targetIndex;
-    updateActiveSubtitleItem();
+    jumpToSubtitle(targetIndex);
 });
+
+// 跳转到指定字幕
+function jumpToSubtitle(index) {
+    if (index < 0 || index >= subtitles.length) return;
+    
+    if (currentMediaType === 'video') {
+        videoPlayer.currentTime = subtitles[index].start;
+    } else if (audioElement) {
+        audioElement.currentTime = subtitles[index].start;
+    }
+    currentSubtitleIndex = index;
+    updateActiveSubtitleItem();
+}
 
 // 时间跳转
 timeJumpBtn.addEventListener('click', () => {
@@ -1252,7 +1293,7 @@ timeJumpBtn.addEventListener('click', () => {
     if (!isNaN(time) && time >= 0) {
         if (currentMediaType === 'video') {
             videoPlayer.currentTime = time;
-        } else {
+        } else if (audioElement) {
             audioElement.currentTime = time;
         }
     }
@@ -1264,7 +1305,7 @@ timeJumpInput.addEventListener('keypress', (e) => {
         if (!isNaN(time) && time >= 0) {
             if (currentMediaType === 'video') {
                 videoPlayer.currentTime = time;
-            } else {
+            } else if (audioElement) {
                 audioElement.currentTime = time;
             }
         }
@@ -1278,9 +1319,22 @@ showSubtitleListBtn.addEventListener('click', () => {
 
 // 打开字幕列表面板
 function openSubtitleListPanel() {
+    // 暂停当前播放
+    pauseCurrentMedia();
+    
     subtitleListPanel.classList.add('active');
     panelOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
+    
+    // 确保当前字幕项在可视区域内
+    if (currentSubtitleIndex >= 0) {
+        const activeItem = subtitleList.querySelector(`.subtitle-item:nth-child(${currentSubtitleIndex + 1})`);
+        if (activeItem) {
+            setTimeout(() => {
+                activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+    }
 }
 
 // 关闭字幕列表面板
@@ -1288,6 +1342,17 @@ function closeSubtitleListPanelFunc() {
     subtitleListPanel.classList.remove('active');
     panelOverlay.classList.remove('active');
     document.body.style.overflow = '';
+    
+    // 恢复播放
+    if (playerWasPlaying) {
+        if (currentMediaType === 'video') {
+            videoPlayer.play();
+        } else if (audioElement) {
+            audioElement.play();
+            audioPlayPauseBtn.textContent = '⏸';
+            audioPlayPauseBtn.classList.add('active');
+        }
+    }
 }
 
 closeSubtitleListPanel.addEventListener('click', closeSubtitleListPanelFunc);
@@ -1670,7 +1735,7 @@ async function processAnkiCard(word, definition) {
         modelName: modelSelect.value,
         fields: {
             [wordFieldSelect.value]: word,
-            [sentenceFieldSelect.value]: currentSentence,
+            [sentenceFieldSelect.value]: currentSentence, // 直接使用句子，不加编号
             [definitionFieldSelect.value]: definition
         },
         options: { allowDuplicate: false },
@@ -2069,7 +2134,7 @@ function closeDictionaryPanel() {
     if (playerWasPlaying) {
         if (currentMediaType === 'video' && videoPlayer.paused) {
             videoPlayer.play();
-        } else if (currentMediaType === 'audio' && audioElement.paused) {
+        } else if (currentMediaType === 'audio' && audioElement && audioElement.paused) {
             audioElement.play();
             audioPlayPauseBtn.textContent = '⏸';
             audioPlayPauseBtn.classList.add('active');
@@ -2165,9 +2230,15 @@ async function init() {
     updateLanguageModeButton();
     updateMediaModeButton();
     updateControlButtons();
+    updateMediaDisplay();
+    
+    // 初始化音频元素
+    if (!audioElement) {
+        audioElement = new Audio();
+        initAudioControls();
+    }
     
     // 初始化 kuromoji 分词器
-    // await initKuromoji();
     try {
         await initKuromoji(); // 确保分词器实例已经生成
         if (!tokenizer) {
@@ -2213,3 +2284,88 @@ window.mediaPlayer = {
         currentMediaType: currentMediaType
     })
 };
+
+// 添加CSS样式来优化PC端字幕划取
+const style = document.createElement('style');
+style.textContent = `
+    /* 优化PC端字幕划取 */
+    .selectable-word, .selectable-text, .sentence-word {
+        cursor: pointer;
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        padding: 2px 1px;
+        margin: 0 1px;
+        border-radius: 2px;
+        transition: background-color 0.2s;
+    }
+    
+    .selectable-word:hover, .sentence-word:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .selectable-word.highlight, .sentence-word.highlight {
+        background-color: rgba(255, 215, 0, 0.3);
+    }
+    
+    .video-subtitle-text {
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        cursor: text;
+        font-size: 1.2em;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    }
+    
+    .subtitle-content {
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        cursor: text;
+        line-height: 1.4;
+    }
+    
+    .audio-subtitle-item {
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        cursor: text;
+        padding: 8px 12px;
+        margin: 4px 0;
+        border-radius: 4px;
+        transition: all 0.3s;
+        line-height: 1.5;
+    }
+    
+    .audio-subtitle-item.active {
+        background-color: rgba(59, 130, 246, 0.2);
+        border-left: 3px solid #3b82f6;
+    }
+    
+    .audio-subtitle-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    /* 优化字幕显示区域 */
+    .subtitle-text {
+        line-height: 1.6;
+        letter-spacing: 0.5px;
+        min-height: 60px;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+    
+    /* 音频字幕容器，确保当前字幕可见 */
+    .audio-subtitles-container {
+        max-height: 300px;
+        overflow-y: auto;
+        scroll-behavior: smooth;
+    }
+`;
+document.head.appendChild(style);
