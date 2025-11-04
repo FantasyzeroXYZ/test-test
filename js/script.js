@@ -591,6 +591,7 @@ subtitleFileInput.addEventListener('change', function(e) {
         const reader = new FileReader();
         reader.onload = function(e) {
             const content = e.target.result;
+            // console.log("加载字幕文件内容"); // 调试输出
             parseSubtitle(content);
         };
         reader.readAsText(file);
@@ -600,11 +601,13 @@ subtitleFileInput.addEventListener('change', function(e) {
 // 解析字幕文件（支持SRT和VTT格式）
 function parseSubtitle(content) {
     subtitles = [];
-    
+    // console.log("解析字幕内容"); // 调试输出
     // 检测格式并解析
-    if (content.includes('WEBVTT') || content.includes('-->')) {
+    if (content.includes('WEBVTT')) {
+        // console.log("检测到VTT格式字幕"); // 调试输出
         parseVTTSubtitle(content);
     } else {
+        // console.log("检测到SRT格式字幕"); // 调试输出
         parseSRTSubtitle(content);
     }
     
@@ -621,6 +624,7 @@ function parseSubtitle(content) {
 
 // 解析SRT字幕
 function parseSRTSubtitle(content) {
+    // console.log("解析SRT字幕内容"); // 调试输出
     const blocks = content.split(/\n\s*\n/);
     
     blocks.forEach(block => {
@@ -644,7 +648,9 @@ function parseSRTSubtitle(content) {
                 
                 // 合并所有文本行，并清理末尾编号
                 let text = lines.slice(2).join(' ').trim();
+                const rawText = text; // 保存原始文本以备调试
                 text = cleanSubtitleText(text);
+                // console.log('清理前：', rawText, '→ 清理后：', text); // 调试输出
                 
                 if (text) {
                     subtitles.push({
@@ -705,22 +711,19 @@ function parseVTTSubtitle(content) {
 function cleanSubtitleText(text) {
     // 移除HTML标签
     text = text.replace(/<[^>]*>/g, '');
-    
-    // 移除常见的末尾编号模式，如 "1", "01", "(1)", "[1]" 等
-    text = text.replace(/\s*[(\[]?\d+[)\]]?\s*$/, '');
-    
-    // 移除其他可能的编号格式
-    text = text.replace(/\s*\d+\.\s*$/, '');
-    text = text.replace(/\s*-\s*\d+\s*$/, '');
-    
-    // 移除形如 "Uncle is my uncle, too... I think. 267" 的末尾数字
-    text = text.replace(/\s*\d+\s*$/, '');
-    
+
+    // 移除常见的尾部编号或顺序号，如 "1", "(1)", "[1]", "-1", "１"（全角数字）
+    text = text.replace(/[\s,，.。!！?？(（\[]*[-–—]?[0-9０-９]+[)\]）]*\s*$/u, '');
+
+    // 如果仍有句号、逗号后带数字的情况，如 "castle linderhof, 3" 或 "recently 70"
+    text = text.replace(/([,.，。!！?？])\s*[0-9０-９]+\s*$/u, '$1');
+
     // 移除多个连续空格
     text = text.replace(/\s+/g, ' ');
-    
+
     return text.trim();
 }
+
 
 // 更新字幕列表
 function updateSubtitleList() {
@@ -1110,7 +1113,7 @@ function updateSubtitle(currentTime) {
     if (foundIndex !== -1) {
         const currentSubtitle = subtitles[foundIndex];
         currentSubtitleIndex = foundIndex;
-        
+
         // 更新视频内字幕
         if (videoSubtitlesVisible && currentMediaType === 'video') {
             videoSubtitles.innerHTML = `<span class="video-subtitle-text selectable-text">${currentSubtitle.text}</span>`;
