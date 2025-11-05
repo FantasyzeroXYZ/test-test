@@ -955,6 +955,17 @@ async function showJapaneseWordSegmentation(sentence, currentWord = '') {
     }
 }
 
+// 辅助函数：HTML转义
+function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') return unsafe;
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // 查询日语单词
 async function searchJapaneseWordInPanel(word) {
     if (!word.trim()) {
@@ -969,72 +980,206 @@ async function searchJapaneseWordInPanel(word) {
     panelWordTitle.textContent = `查询: ${word}`;
     panelSearchInput.value = word;
     
-    // 油猴脚本接口：日语查询回调
-    if (window.japaneseWordSearch) {
-        window.japaneseWordSearch(word);
-    } else {
-        // 默认行为：使用Jisho API查询日语单词
-        try {
-            const response = await fetch(`https://jisho.org/api/v1/search/words?keyword=${encodeURIComponent(word)}`);
-            
-            if (!response.ok) {
+    try {
+        const apiUrl = `https://freedictionaryapi.com/api/v1/entries/ja/${encodeURIComponent(word)}`;
+        const response = await fetch(apiUrl);
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error(`未找到日语单词 "${word}"`);
+            } else {
                 throw new Error(`API请求失败: ${response.status}`);
             }
-            
-            const data = await response.json();
-            displayJapaneseWordDataInPanel(data);
-        } catch (error) {
-            panelDictionaryResult.innerHTML = `<div class="error">${error.message}</div>`;
-            console.error('查询错误:', error);
         }
+        
+        const data = await response.json();
+        displayJapaneseWordDataInPanel(data);
+    } catch (error) {
+        panelDictionaryResult.innerHTML = `<div class="error">${error.message}</div>`;
+        console.error('查询错误:', error);
     }
 }
 
 // 显示日语单词数据在底部面板
 function displayJapaneseWordDataInPanel(wordData) {
-    let html = '';
+    if (!wordData.word || !Array.isArray(wordData.entries)) {
+        panelDictionaryResult.innerHTML = '<div class="error">返回的数据格式不正确</div>';
+        return;
+    }
     
-    if (wordData.data && wordData.data.length > 0) {
-        const word = wordData.data[0];
+    let html = `
+        <div class="word-header">
+            <div class="word-title">${escapeHtml(wordData.word)}</div>
+            <span class="language-tag">日语</span>
+        </div>
+    `;
+    
+    // 遍历条目
+    wordData.entries.forEach((entry, entryIndex) => {
+        html += `<div class="entry">`;
         
-        // 单词标题和读音
-        html += `<div class="word-header">`;
-        html += `<div class="word-title">${word.japanese[0].word || word.japanese[0].reading}</div>`;
-        
-        if (word.japanese[0].reading) {
-            html += `<div class="phonetic">${word.japanese[0].reading}</div>`;
+        // 显示词性
+        if (entry.partOfSpeech) {
+            html += `<div class="part-of-speech">${escapeHtml(entry.partOfSpeech)}</div>`;
         }
         
-        html += `</div>`;
+        // 显示发音 - 使用折叠方式
+        if (Array.isArray(entry.pronunciations) && entry.pronunciations.length > 0) {
+            const filteredPronunciations = entry.pronunciations.filter(p => 
+                p.tags && p.tags.some(tag => tag === "US" || tag === "UK")
+            ).slice(0, 2);
+            
+            if (filteredPronunciations.length > 0) {
+                html += `<div class="initial-pronunciations">`;
+                filteredPronunciations.forEach(pronunciation => {
+                    const type = pronunciation.type ? ` (${pronunciation.type})` : '';
+                    const tags = pronunciation.tags && pronunciation.tags.length > 0 ? 
+                        ` <small>${pronunciation.tags.join(', ')}</small>` : '';
+                    html += `<div class="pronunciation">/${escapeHtml(pronunciation.text)}/${type}${tags}</div>`;
+                });
+                html += `</div>`;
+                
+                // 如果有更多发音，添加切换按钮
+                if (entry.pronunciations.length > filteredPronunciations.length) {
+                    const allPronunciationsId = `all-pronunciations-${entryIndex}`;
+                    html += `<button class="toggle-button" 
+                              data-target="${allPronunciationsId}"
+                              data-show-text="显示全部发音 (${entry.pronunciations.length})"
+                              data-hide-text="隐藏全部发音">显示全部发音 (${entry.pronunciations.length})</button>`;
+                    html += `<div id="${allPronunciationsId}" class="collapsible-section" style="display: none;">`;
+                    entry.pronunciations.forEach(pronunciation => {
+                        const type = pronunciation.type ? ` (${pronunciation.type})` : '';
+                        const tags = pronunciation.tags && pronunciation.tags.length > 0 ? 
+                            ` <small>${pronunciation.tags.join(', ')}</small>` : '';
+                        html += `<div class="pronunciation">/${escapeHtml(pronunciation.text)}/${type}${tags}</div>`;
+                    });
+                    html += `</div>`;
+                }
+            }
+        }
         
-        // 词义解释
-        if (word.senses && word.senses.length > 0) {
-            word.senses.forEach((sense, index) => {
-                if (index < 3) { // 只显示前三个定义
-                    html += `<div class="meaning-section">`;
-                    html += `<div class="part-of-speech">${sense.parts_of_speech.join(', ')}</div>`;
+        // 显示词义
+        if (Array.isArray(entry.senses)) {
+            let senseCounter = 0;
+            
+            const renderSenses = (senses, level = 0, sensePath = '') => {
+                let sensesHtml = '';
+                senses.forEach((sense, index) => {
+                    senseCounter++;
+                    const currentSensePath = sensePath ? `${sensePath}-${index}` : `${entryIndex}-${index}`;
                     
-                    if (sense.english_definitions && sense.english_definitions.length > 0) {
-                        sense.english_definitions.forEach((def, defIndex) => {
-                            if (defIndex < 3) { // 只显示前三个英文定义
-                                html += `<div class="definition">${defIndex + 1}. ${def}</div>`;
+                    sensesHtml += `<div class="sense" style="margin-left: ${level * 15}px;">`;
+                    
+                    // 显示定义
+                    if (sense.definition) {
+                        const number = level === 0 ? `${senseCounter}.` : `${senseCounter}`;
+                        sensesHtml += `<div class="definition"><strong>${number}</strong> ${escapeHtml(sense.definition)}</div>`;
+                    }
+                    
+                    // 显示标签
+                    if (Array.isArray(sense.tags) && sense.tags.length > 0) {
+                        sensesHtml += `<div style="font-size: 12px; color: #586069; margin-bottom: 5px;">标签: ${sense.tags.map(t => escapeHtml(t)).join(', ')}</div>`;
+                    }
+                    
+                    // 显示例句 - 采用可折叠方式
+                    if (Array.isArray(sense.examples) && sense.examples.length > 0) {
+                        // 只显示前2个例句
+                        const maxInitialExamples = 2;
+                        const initialExamples = sense.examples.slice(0, maxInitialExamples);
+                        const remainingExamples = sense.examples.slice(maxInitialExamples);
+                        
+                        // 显示初始例句
+                        initialExamples.forEach(example => {
+                            sensesHtml += `<div class="example">${escapeHtml(example)}</div>`;
+                        });
+                        
+                        // 如果有更多例句，添加切换按钮
+                        if (remainingExamples.length > 0) {
+                            const allExamplesId = `all-examples-${currentSensePath}`;
+                            sensesHtml += `<button class="toggle-button examples-toggle" 
+                                      data-target="${allExamplesId}"
+                                      data-show-text="显示更多例句 (${sense.examples.length})"
+                                      data-hide-text="隐藏更多例句">显示更多例句 (${sense.examples.length})</button>`;
+                            sensesHtml += `<div id="${allExamplesId}" class="collapsible-section" style="display: none;">`;
+                            remainingExamples.forEach(example => {
+                                sensesHtml += `<div class="example">${escapeHtml(example)}</div>`;
+                            });
+                            sensesHtml += `</div>`;
+                        }
+                    }
+                    
+                    // 显示引文
+                    if (Array.isArray(sense.quotes)) {
+                        sense.quotes.forEach(quote => {
+                            sensesHtml += `<div class="quote">"${escapeHtml(quote.text)}"`;
+                            if (quote.reference) {
+                                sensesHtml += `<div class="quote-reference">— ${escapeHtml(quote.reference)}</div>`;
                             }
+                            sensesHtml += `</div>`;
                         });
                     }
                     
-                    html += `</div>`;
-                }
-            });
-        } else {
-            html += `<div class="meaning-section">`;
-            html += `<div class="definition">未找到该单词的详细释义。</div>`;
-            html += `</div>`;
+                    // 显示特定词义的同义词和反义词
+                    if (Array.isArray(sense.synonyms) && sense.synonyms.length > 0) {
+                        sensesHtml += `<div class="synonyms"><span>同义词:</span> ${sense.synonyms.map(s => escapeHtml(s)).join(', ')}</div>`;
+                    }
+                    if (Array.isArray(sense.antonyms) && sense.antonyms.length > 0) {
+                        sensesHtml += `<div class="antonyms"><span>反义词:</span> ${sense.antonyms.map(a => escapeHtml(a)).join(', ')}</div>`;
+                    }
+                    
+                    // 递归渲染子词义
+                    if (Array.isArray(sense.subsenses) && sense.subsenses.length > 0) {
+                        sensesHtml += renderSenses(sense.subsenses, level + 1, currentSensePath);
+                    }
+                    
+                    sensesHtml += `</div>`;
+                });
+                return sensesHtml;
+            };
+            
+            html += renderSenses(entry.senses);
         }
-    } else {
-        html += `<div class="meaning-section">`;
-        html += `<div class="definition">未找到该单词的详细释义。</div>`;
+        
+        // 显示词形变化 - 使用折叠方式
+        if (Array.isArray(entry.forms) && entry.forms.length > 0) {
+            // 只显示前2个词形变化
+            const maxInitialForms = 2;
+            const initialForms = entry.forms.slice(0, maxInitialForms);
+            const remainingForms = entry.forms.slice(maxInitialForms);
+            
+            html += `<div class="initial-forms" style="margin-top: 15px;"><small><strong>词形变化:</strong> `;
+            const initialFormsHtml = initialForms.map(form => 
+                `${escapeHtml(form.word)}${form.tags && form.tags.length > 0 ? ` (${form.tags.join(', ')})` : ''}`
+            ).join(', ');
+            html += initialFormsHtml;
+            html += `</small></div>`;
+            
+            // 如果有更多词形变化，添加切换按钮
+            if (remainingForms.length > 0) {
+                const allFormsId = `all-forms-${entryIndex}`;
+                html += `<button class="toggle-button" 
+                          data-target="${allFormsId}"
+                          data-show-text="显示全部词形变化 (${entry.forms.length})"
+                          data-hide-text="隐藏全部词形变化">显示全部词形变化 (${entry.forms.length})</button>`;
+                html += `<div id="${allFormsId}" class="collapsible-section" style="display: none;">`;
+                const allFormsHtml = entry.forms.map(form => 
+                    `${escapeHtml(form.word)}${form.tags && form.tags.length > 0 ? ` (${form.tags.join(', ')})` : ''}`
+                ).join(', ');
+                html += allFormsHtml;
+                html += `</div>`;
+            }
+        }
+        
+        // 显示同义词和反义词
+        if (Array.isArray(entry.synonyms) && entry.synonyms.length > 0) {
+            html += `<div class="synonyms"><span>同义词:</span> ${entry.synonyms.map(s => escapeHtml(s)).join(', ')}</div>`;
+        }
+        if (Array.isArray(entry.antonyms) && entry.antonyms.length > 0) {
+            html += `<div class="antonyms"><span>反义词:</span> ${entry.antonyms.map(a => escapeHtml(a)).join(', ')}</div>`;
+        }
+        
         html += `</div>`;
-    }
+    });
     
     panelDictionaryResult.innerHTML = html;
 }
@@ -1261,67 +1406,205 @@ async function searchWordInPanel(word) {
     panelSearchInput.value = word;
     
     try {
-        const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+        const apiUrl = `https://freedictionaryapi.com/api/v1/entries/en/${encodeURIComponent(word)}`;
+        const response = await fetch(apiUrl);
         
         if (!response.ok) {
             if (response.status === 404) {
-                throw new Error(`未找到单词 "${word}" 的定义`);
+                throw new Error(`未找到单词 "${word}"`);
             } else {
                 throw new Error(`API请求失败: ${response.status}`);
             }
         }
         
         const data = await response.json();
-        displayWordDataInPanel(data[0]);
+        displayWordDataInPanel(data);
     } catch (error) {
         panelDictionaryResult.innerHTML = `<div class="error">${error.message}</div>`;
         console.error('查询错误:', error);
     }
 }
 
-// 显示单词数据在底部面板（移除编号）
+// 显示单词数据在底部面板
 function displayWordDataInPanel(wordData) {
-    let html = '';
-    
-    // 单词标题和音标
-    html += `<div class="word-header">`;
-    html += `<div class="word-title">${wordData.word}</div>`;
-    
-    if (wordData.phonetic) {
-        html += `<div class="phonetic">${wordData.phonetic}</div>`;
-    } else if (wordData.phonetics && wordData.phonetics.length > 0) {
-        const phonetic = wordData.phonetics.find(p => p.text) || wordData.phonetics[0];
-        if (phonetic && phonetic.text) {
-            html += `<div class="phonetic">${phonetic.text}</div>`;
-        }
+    if (!wordData.word || !Array.isArray(wordData.entries)) {
+        panelDictionaryResult.innerHTML = '<div class="error">返回的数据格式不正确</div>';
+        return;
     }
     
-    html += `</div>`;
+    let html = `
+        <div class="word-header">
+            <div class="word-title">${escapeHtml(wordData.word)}</div>
+            <span class="language-tag">英语</span>
+        </div>
+    `;
     
-    // 词义解释（移除编号）
-    if (wordData.meanings && wordData.meanings.length > 0) {
-        wordData.meanings.forEach(meaning => {
-            html += `<div class="meaning-section">`;
-            html += `<div class="part-of-speech">${meaning.partOfSpeech}</div>`;
+    // 遍历条目
+    wordData.entries.forEach((entry, entryIndex) => {
+        html += `<div class="entry">`;
+        
+        // 显示词性
+        if (entry.partOfSpeech) {
+            html += `<div class="part-of-speech">${escapeHtml(entry.partOfSpeech)}</div>`;
+        }
+        
+        // 显示发音 - 使用折叠方式
+        if (Array.isArray(entry.pronunciations) && entry.pronunciations.length > 0) {
+            const filteredPronunciations = entry.pronunciations.filter(p => 
+                p.tags && p.tags.some(tag => tag === "US" || tag === "UK")
+            ).slice(0, 2);
             
-            if (meaning.definitions && meaning.definitions.length > 0) {
-                meaning.definitions.forEach((def, index) => {
-                    if (index < 3) { // 只显示前三个定义
-                        html += `<div class="definition">${def.definition}</div>`;
-                        if (def.example) {
-                            html += `<div class="example">例句: "${def.example}"</div>`;
+            if (filteredPronunciations.length > 0) {
+                html += `<div class="initial-pronunciations">`;
+                filteredPronunciations.forEach(pronunciation => {
+                    const type = pronunciation.type ? ` (${pronunciation.type})` : '';
+                    const tags = pronunciation.tags && pronunciation.tags.length > 0 ? 
+                        ` <small>${pronunciation.tags.join(', ')}</small>` : '';
+                    html += `<div class="pronunciation">/${escapeHtml(pronunciation.text)}/${type}${tags}</div>`;
+                });
+                html += `</div>`;
+                
+                // 如果有更多发音，添加切换按钮
+                if (entry.pronunciations.length > filteredPronunciations.length) {
+                    const allPronunciationsId = `all-pronunciations-${entryIndex}`;
+                    html += `<button class="toggle-button" 
+                              data-target="${allPronunciationsId}"
+                              data-show-text="显示全部发音 (${entry.pronunciations.length})"
+                              data-hide-text="隐藏全部发音">显示全部发音 (${entry.pronunciations.length})</button>`;
+                    html += `<div id="${allPronunciationsId}" class="collapsible-section" style="display: none;">`;
+                    entry.pronunciations.forEach(pronunciation => {
+                        const type = pronunciation.type ? ` (${pronunciation.type})` : '';
+                        const tags = pronunciation.tags && pronunciation.tags.length > 0 ? 
+                            ` <small>${pronunciation.tags.join(', ')}</small>` : '';
+                        html += `<div class="pronunciation">/${escapeHtml(pronunciation.text)}/${type}${tags}</div>`;
+                    });
+                    html += `</div>`;
+                }
+            }
+        }
+        
+        // 显示词义
+        if (Array.isArray(entry.senses)) {
+            let senseCounter = 0;
+            
+            const renderSenses = (senses, level = 0, sensePath = '') => {
+                let sensesHtml = '';
+                senses.forEach((sense, index) => {
+                    senseCounter++;
+                    const currentSensePath = sensePath ? `${sensePath}-${index}` : `${entryIndex}-${index}`;
+                    
+                    sensesHtml += `<div class="sense" style="margin-left: ${level * 15}px;">`;
+                    
+                    // 显示定义
+                    if (sense.definition) {
+                        const number = level === 0 ? `${senseCounter}.` : `${senseCounter}`;
+                        sensesHtml += `<div class="definition"><strong>${number}</strong> ${escapeHtml(sense.definition)}</div>`;
+                    }
+                    
+                    // 显示标签
+                    if (Array.isArray(sense.tags) && sense.tags.length > 0) {
+                        sensesHtml += `<div style="font-size: 12px; color: #586069; margin-bottom: 5px;">标签: ${sense.tags.map(t => escapeHtml(t)).join(', ')}</div>`;
+                    }
+                    
+                    // 显示例句 - 采用可折叠方式
+                    if (Array.isArray(sense.examples) && sense.examples.length > 0) {
+                        // 只显示前2个例句
+                        const maxInitialExamples = 2;
+                        const initialExamples = sense.examples.slice(0, maxInitialExamples);
+                        const remainingExamples = sense.examples.slice(maxInitialExamples);
+                        
+                        // 显示初始例句
+                        initialExamples.forEach(example => {
+                            sensesHtml += `<div class="example">${escapeHtml(example)}</div>`;
+                        });
+                        
+                        // 如果有更多例句，添加切换按钮
+                        if (remainingExamples.length > 0) {
+                            const allExamplesId = `all-examples-${currentSensePath}`;
+                            sensesHtml += `<button class="toggle-button examples-toggle" 
+                                      data-target="${allExamplesId}"
+                                      data-show-text="显示更多例句 (${sense.examples.length})"
+                                      data-hide-text="隐藏更多例句">显示更多例句 (${sense.examples.length})</button>`;
+                            sensesHtml += `<div id="${allExamplesId}" class="collapsible-section" style="display: none;">`;
+                            remainingExamples.forEach(example => {
+                                sensesHtml += `<div class="example">${escapeHtml(example)}</div>`;
+                            });
+                            sensesHtml += `</div>`;
                         }
                     }
+                    
+                    // 显示引文
+                    if (Array.isArray(sense.quotes)) {
+                        sense.quotes.forEach(quote => {
+                            sensesHtml += `<div class="quote">"${escapeHtml(quote.text)}"`;
+                            if (quote.reference) {
+                                sensesHtml += `<div class="quote-reference">— ${escapeHtml(quote.reference)}</div>`;
+                            }
+                            sensesHtml += `</div>`;
+                        });
+                    }
+                    
+                    // 显示特定词义的同义词和反义词
+                    if (Array.isArray(sense.synonyms) && sense.synonyms.length > 0) {
+                        sensesHtml += `<div class="synonyms"><span>同义词:</span> ${sense.synonyms.map(s => escapeHtml(s)).join(', ')}</div>`;
+                    }
+                    if (Array.isArray(sense.antonyms) && sense.antonyms.length > 0) {
+                        sensesHtml += `<div class="antonyms"><span>反义词:</span> ${sense.antonyms.map(a => escapeHtml(a)).join(', ')}</div>`;
+                    }
+                    
+                    // 递归渲染子词义
+                    if (Array.isArray(sense.subsenses) && sense.subsenses.length > 0) {
+                        sensesHtml += renderSenses(sense.subsenses, level + 1, currentSensePath);
+                    }
+                    
+                    sensesHtml += `</div>`;
                 });
-            }
+                return sensesHtml;
+            };
             
-            html += `</div>`;
-        });
-    } else {
-        html += `<div class="meaning-section">`;
-        html += `<div class="definition">未找到该单词的详细释义。</div>`;
+            html += renderSenses(entry.senses);
+        }
+        
+        // 显示词形变化 - 使用折叠方式
+        if (Array.isArray(entry.forms) && entry.forms.length > 0) {
+            // 只显示前2个词形变化
+            const maxInitialForms = 2;
+            const initialForms = entry.forms.slice(0, maxInitialForms);
+            const remainingForms = entry.forms.slice(maxInitialForms);
+            
+            html += `<div class="initial-forms" style="margin-top: 15px;"><small><strong>词形变化:</strong> `;
+            const initialFormsHtml = initialForms.map(form => 
+                `${escapeHtml(form.word)}${form.tags && form.tags.length > 0 ? ` (${form.tags.join(', ')})` : ''}`
+            ).join(', ');
+            html += initialFormsHtml;
+            html += `</small></div>`;
+            
+            // 如果有更多词形变化，添加切换按钮
+            if (remainingForms.length > 0) {
+                const allFormsId = `all-forms-${entryIndex}`;
+                html += `<button class="toggle-button" 
+                          data-target="${allFormsId}"
+                          data-show-text="显示全部词形变化 (${entry.forms.length})"
+                          data-hide-text="隐藏全部词形变化">显示全部词形变化 (${entry.forms.length})</button>`;
+                html += `<div id="${allFormsId}" class="collapsible-section" style="display: none;">`;
+                const allFormsHtml = entry.forms.map(form => 
+                    `${escapeHtml(form.word)}${form.tags && form.tags.length > 0 ? ` (${form.tags.join(', ')})` : ''}`
+                ).join(', ');
+                html += allFormsHtml;
+                html += `</div>`;
+            }
+        }
+        
+        // 显示同义词和反义词
+        if (Array.isArray(entry.synonyms) && entry.synonyms.length > 0) {
+            html += `<div class="synonyms"><span>同义词:</span> ${entry.synonyms.map(s => escapeHtml(s)).join(', ')}</div>`;
+        }
+        if (Array.isArray(entry.antonyms) && entry.antonyms.length > 0) {
+            html += `<div class="antonyms"><span>反义词:</span> ${entry.antonyms.map(a => escapeHtml(a)).join(', ')}</div>`;
+        }
+        
         html += `</div>`;
-    }
+    });
     
     panelDictionaryResult.innerHTML = html;
 }
@@ -2346,9 +2629,9 @@ function loadWebSearch(word) {
     if (window.webSearch) {
         window.webSearch(word);
     } else {
-        // 默认行为：使用Jisho进行日语查询
+        // 默认行为：使用youdao进行网页查询
         const url = currentLanguageMode === 'japanese' ? 
-            `https://jisho.org/search/${encodeURIComponent(word)}` :
+            `https://www.youdao.com/result?word=${encodeURIComponent(word)}&lang=ja` :
             `https://www.youdao.com/result?word=${encodeURIComponent(word)}&lang=en`;
         webSearchFrame.src = url;
     }
