@@ -2,266 +2,404 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VAMplayer</title>
-    <link rel="icon" href="./assets/VAMplayer_logo.ico" type="image/x-icon">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="./css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字幕工具箱 - LRC转SRT</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --background-color: #f8f9fa;
+            --card-color: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        
+        .input-section, .output-section {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--card-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+        }
+        
+        .section-title {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--primary-color);
+        }
+        
+        textarea {
+            width: 100%;
+            height: 300px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            resize: vertical;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        button.secondary {
+            background-color: #95a5a6;
+        }
+        
+        button.secondary:hover {
+            background-color: #7f8c8d;
+        }
+        
+        .file-input {
+            margin-bottom: 20px;
+        }
+        
+        .file-input label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .preview-section {
+            margin-top: 30px;
+        }
+        
+        .preview-title {
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        
+        .preview-content {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        
+        .instructions {
+            margin-top: 40px;
+            background-color: var(--card-color);
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .instructions h2 {
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+        
+        .instructions ol {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px 0;
+            color: #666;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>VAMplayer</h1>
-        <p class="subtitle">支持视频/音频播放、字幕显示与Anki卡片生成功能</p>
-    </header>
-    
     <div class="container">
-        <section class="anki-section">
-            <div class="anki-container">
-                <div class="anki-status-row">
-                    <div class="anki-status">
-                        <div class="status-indicator" id="anki-status-indicator"></div>
-                        <span id="anki-status-text">检查Anki连接状态...</span>
-                    </div>
-                    <div class="anki-controls">
-                        <button class="anki-btn" id="check-anki-btn">状态</button>
-                        <button class="anki-btn" id="show-config-btn">配置</button>
-                    </div>
-                </div>
-                
-                <!-- 顶部控制按钮 -->
-                <div class="top-controls">
-                    <button class="media-mode-btn" id="media-mode-btn">
-                        <i class="fas fa-video"></i> 视频模式
-                    </button>
-                    <button class="language-mode-btn" id="language-mode-btn">
-                        <i class="fas fa-language"></i> 英语模式
-                    </button>
-                    <div class="import-controls">
-                        <button class="import-btn" id="subtitle-import-btn">
-                            <i class="fas fa-closed-captioning"></i> 字幕
-                        </button>
-                        <button class="import-btn" id="media-import-btn">
-                            <i class="fas fa-file-video"></i> 视频
-                        </button>
-                    </div>
-                </div>
-                
-                <input type="file" id="video-file-input" accept="video/*" class="hidden">
-                <input type="file" id="audio-file-input" accept="audio/*" class="hidden">
-                <input type="file" id="subtitle-file-input" accept=".srt,.vtt,.txt" class="hidden">
-                
-                <div class="auto-config-section hidden" id="auto-config-section">
-                    <div class="auto-config-row">
-                        <label class="auto-config-label" for="deck-select">牌组:</label>
-                        <select class="auto-config-select" id="deck-select">
-                            <option value="">加载中...</option>
-                        </select>
-                    </div>
-                    <div class="auto-config-row">
-                        <label class="auto-config-label" for="model-select">笔记类型:</label>
-                        <select class="auto-config-select" id="model-select">
-                            <option value="">加载中...</option>
-                        </select>
-                    </div>
-                    <div class="auto-config-row">
-                        <label class="auto-config-label" for="word-field-select">单词字段:</label>
-                        <select class="auto-config-select" id="word-field-select">
-                            <option value="">加载中...</option>
-                        </select>
-                    </div>
-                    <div class="auto-config-row">
-                        <label class="auto-config-label" for="sentence-field-select">句子字段:</label>
-                        <select class="auto-config-select" id="sentence-field-select">
-                            <option value="">加载中...</option>
-                        </select>
-                    </div>
-                    <div class="auto-config-row">
-                        <label class="auto-config-label" for="definition-field-select">释义字段:</label>
-                        <select class="auto-config-select" id="definition-field-select">
-                            <option value="">加载中...</option>
-                        </select>
-                    </div>
-                    <div class="auto-config-row">
-                        <label class="auto-config-label" for="audio-field-select">音频字段:</label>
-                        <select class="auto-config-select" id="audio-field-select">
-                            <option value="">加载中...</option>
-                        </select>
-                    </div>
-                    <div class="auto-config-row">
-                        <label class="auto-config-label" for="image-field-select">图片字段:</label>
-                        <select class="auto-config-select" id="image-field-select">
-                            <option value="">加载中...</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <header>
+            <h1>字幕工具箱</h1>
+            <p class="subtitle">LRC转SRT及其他字幕格式转换工具</p>
+        </header>
         
-        <section class="player-section">
-            <div class="player-container">
-                <div class="audio-info">
-                    <div class="album-art">
-                        <i id="media-icon">▶</i>
-                    </div>
-                    <div class="track-info">
-                        <h2 id="track-title">请选择媒体文件</h2>
-                        <p id="track-description">支持 MP4, AVI, MKV, MP3, WAV 等格式</p>
-                    </div>
+        <div class="main-content">
+            <div class="input-section">
+                <h2 class="section-title">输入 (LRC格式)</h2>
+                <div class="file-input">
+                    <label for="lrc-file">上传LRC文件：</label>
+                    <input type="file" id="lrc-file" accept=".lrc">
                 </div>
-                
-                <div class="video-player" id="video-player">
-                    <video id="player" controls>
-                        <!-- 视频源将通过JavaScript动态设置 -->
-                    </video>
-                    <div class="video-subtitles" id="video-subtitles">
-                        <!-- 视频内字幕将动态生成 -->
-                    </div>
-                </div>
-                
-                <div class="audio-player" id="audio-player">
-                    <div class="audio-player-container">
-                        <div class="audio-controls">
-                            <div class="audio-progress-container">
-                                <span class="audio-time" id="audio-current-time">0:00</span>
-                                <div class="audio-progress" id="audio-progress">
-                                    <div class="audio-progress-filled" id="audio-progress-filled"></div>
-                                    <div class="progress-thumb" id="progress-thumb"></div>
-                                </div>
-                                <span class="audio-time" id="audio-duration">0:00</span>
-                            </div>
-                            <div class="audio-volume-container">
-                                <span>🔊</span>
-                                <div class="audio-volume" id="audio-volume">
-                                    <div class="audio-volume-filled" id="audio-volume-filled"></div>
-                                    <div class="volume-thumb" id="volume-thumb"></div>
-                                </div>
-                            </div>
-                            <div class="audio-buttons">
-                                <button class="audio-btn" id="audio-play-pause-btn">▶</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="audio-subtitles" id="audio-subtitles">
-                        <!-- 音频滚动字幕将动态生成 -->
-                    </div>
-                </div>
-                
-                <div class="video-controls">
-                    <button class="control-btn" id="prev-sentence-btn" title="上一句">
-                        <i class="fas fa-step-backward"></i>
-                    </button>
-                    <button class="control-btn" id="next-sentence-btn" title="下一句">
-                        <i class="fas fa-step-forward"></i>
-                    </button>
-                    <button class="control-btn" id="toggle-video-subtitles-btn" title="切换视频内字幕">
-                        <i class="fas fa-closed-captioning"></i>
-                    </button>
-                    <button class="control-btn" id="show-subtitle-list-btn" title="全部字幕">
-                        <i class="fas fa-list"></i>
-                    </button>
-                    <button class="control-btn" id="toggle-audio-subtitles-btn" title="切换音频字幕">
-                        <i class="fas fa-volume-up"></i>
-                    </button>
-                    <div class="time-input-container">
-                        <input type="number" class="time-input" id="time-jump-input" placeholder="时间(秒)" step="0.1" min="0">
-                        <button class="time-jump-btn" id="time-jump-btn">跳转</button>
-                    </div>
+                <textarea id="lrc-input" placeholder="粘贴LRC字幕内容或上传文件...">[00:01.00]这是第一句歌词
+[00:05.50]这是第二句歌词
+[00:10.20]这是第三句歌词
+[00:15.80]这是第四句歌词
+[00:20.30]这是第五句歌词</textarea>
+                <div class="button-group">
+                    <button id="convert-btn">转换为SRT</button>
+                    <button id="clear-input" class="secondary">清空输入</button>
+                    <button id="example-btn" class="secondary">加载示例</button>
                 </div>
             </div>
-        </section>
-        
-        <section class="subtitle-section">
-            <div class="subtitle-display" id="subtitle-display">
-                <div class="subtitle-text" id="subtitle-text">
-                    无字幕
+            
+            <div class="output-section">
+                <h2 class="section-title">输出 (SRT格式)</h2>
+                <textarea id="srt-output" placeholder="转换后的SRT字幕将显示在这里..." readonly></textarea>
+                <div class="button-group">
+                    <button id="copy-btn">复制到剪贴板</button>
+                    <button id="download-btn">下载SRT文件</button>
+                    <button id="clear-output" class="secondary">清空输出</button>
                 </div>
             </div>
-            <div class="subtitle-controls">
-                <button class="subtitle-btn" id="toggle-subtitle-btn">显示/隐藏字幕</button>
-            </div>
-            <p class="hint">提示：直接点击字幕中的单词，该单词会自动查询并显示释义</p>
-        </section>
-        
-        <div class="github-link">
-            <a href="https://github.com/FantasyzeroXYZ/VAMplayer" target="_blank" title="查看项目源码">
-                <i class="fab fa-github"></i>
-            </a>
         </div>
+        
+        <div class="preview-section">
+            <h3 class="preview-title">预览</h3>
+            <div id="preview" class="preview-content">转换后的字幕将在这里预览...</div>
+        </div>
+        
+        <div class="instructions">
+            <h2>使用说明</h2>
+            <ol>
+                <li>在左侧输入框中粘贴LRC格式的字幕内容，或通过"上传LRC文件"按钮上传文件</li>
+                <li>点击"转换为SRT"按钮，将LRC格式转换为SRT格式</li>
+                <li>转换后的SRT字幕将显示在右侧输出框中</li>
+                <li>您可以通过"复制到剪贴板"按钮复制结果，或通过"下载SRT文件"按钮下载</li>
+                <li>如需重新开始，可以使用"清空输入"和"清空输出"按钮</li>
+            </ol>
+            
+            <h2>格式说明</h2>
+            <p><strong>LRC格式</strong>：每行歌词前带有时间标签，格式为[mm:ss.xx]</p>
+            <p><strong>SRT格式</strong>：包含序号、时间轴和字幕文本，时间格式为hh:mm:ss,xxx</p>
+        </div>
+        
+        <footer>
+            <p>字幕工具箱 &copy; 2023 - 部署在GitHub Pages上</p>
+        </footer>
     </div>
-    
-    <!-- 底部弹出面板 -->
-    <div class="panel-overlay" id="panel-overlay"></div>
-    <div class="dictionary-panel" id="dictionary-panel">
-        <div class="panel-header">
-            <div class="panel-title" id="panel-word-title">单词查询</div>
-            <button class="close-panel" id="close-panel">×</button>
-        </div>
-        
-        <!-- 修复：搜索和Anki按钮并排 - 使用图标 -->
-        <div class="panel-search-anki-container">
-            <div class="panel-search-container">
-                <input type="text" class="panel-search-input" id="panel-search-input" placeholder="输入要查询的单词...">
-                <button class="panel-search-btn" id="panel-search-btn">
-                    <i class="fas fa-search"></i>
-                </button>
-                <button class="append-word-btn" id="append-word-btn" title="追加词汇">
-                    <i class="fas fa-plus"></i>
-                </button>
-                <button class="panel-anki-btn" id="panel-add-to-anki-btn" title="添加到Anki">
-                    <img src="./assets/icons8-anki-24.png" alt="Anki" class="anki-icon">
-                </button>
-            </div>
-        </div>
-        
-        <div class="original-sentence" id="original-sentence">
-            原句将显示在这里...
-        </div>
-        
-        <!-- 标签页导航 默认标签页active-->  
-        <div class="dictionary-tabs">
-            <button class="tab-button active" data-tab="dictionary-tab">词典释义</button>
-            <button class="tab-button" data-tab="web-tab">网页查询</button>
-            <button class="tab-button" data-tab="custom-tab">自定义释义</button>
-        </div>
-        
-        <!-- 标签页内容 默认标签页active-->
-        <div class="tab-content">
-            <div id="dictionary-tab" class="tab-pane active">
-                <div class="dictionary-result" id="panel-dictionary-result">
-                    查询结果将显示在这里...
-                </div>
-            </div>
-            <div id="custom-tab" class="tab-pane">
-                <div class="custom-definition">
-                    <textarea id="panel-custom-definition-input" placeholder="如果查词没有返回内容或者想自定义释义内容，请在此输入..."></textarea>
-                </div>
-            </div>
-            <div id="web-tab" class="tab-pane">
-                <div class="dictionary-result" id="panel-web-result">
-                    <iframe id="web-search-frame" style="width: 100%; height: 300px; border: none;" src="about:blank"></iframe>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- 字幕列表面板 -->
-    <div class="subtitle-list-panel" id="subtitle-list-panel">
-        <div class="panel-header">
-            <div class="panel-title">全部字幕</div>
-            <button class="close-panel" id="close-subtitle-list-panel">×</button>
-        </div>
-        
-        <ul class="subtitle-list" id="subtitle-list">
-            <!-- 字幕列表将动态生成 -->
-        </ul>
-    </div>
-    
-    <footer>
-        <p>网页媒体播放器 - 专为语言学习设计</p>
-    </footer>
 
-    <!-- 引入kuromoji JS库 -->
-    <script src="./kuromoji/build/kuromoji.js"></script>
-    <script src="./js/script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const lrcInput = document.getElementById('lrc-input');
+            const srtOutput = document.getElementById('srt-output');
+            const convertBtn = document.getElementById('convert-btn');
+            const copyBtn = document.getElementById('copy-btn');
+            const downloadBtn = document.getElementById('download-btn');
+            const clearInputBtn = document.getElementById('clear-input');
+            const clearOutputBtn = document.getElementById('clear-output');
+            const exampleBtn = document.getElementById('example-btn');
+            const lrcFileInput = document.getElementById('lrc-file');
+            const preview = document.getElementById('preview');
+            
+            // LRC转SRT函数
+            function lrcToSrt(lrcText) {
+                const lines = lrcText.split('\n');
+                const srtLines = [];
+                let counter = 1;
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    
+                    // 匹配LRC时间标签 [mm:ss.xx]
+                    const timeMatch = line.match(/\[(\d+):(\d+)\.(\d+)\]/);
+                    
+                    if (timeMatch) {
+                        const minutes = parseInt(timeMatch[1]);
+                        const seconds = parseInt(timeMatch[2]);
+                        const milliseconds = parseInt(timeMatch[3]);
+                        
+                        // 计算开始时间 (hh:mm:ss,xxx)
+                        const startTime = formatTime(minutes, seconds, milliseconds);
+                        
+                        // 计算结束时间 (假设每句持续5秒)
+                        let endMinutes = minutes;
+                        let endSeconds = seconds + 5;
+                        let endMilliseconds = milliseconds;
+                        
+                        if (endSeconds >= 60) {
+                            endMinutes += Math.floor(endSeconds / 60);
+                            endSeconds = endSeconds % 60;
+                        }
+                        
+                        const endTime = formatTime(endMinutes, endSeconds, endMilliseconds);
+                        
+                        // 提取歌词文本
+                        const text = line.replace(timeMatch[0], '').trim();
+                        
+                        if (text) {
+                            // 构建SRT格式
+                            srtLines.push(counter.toString());
+                            srtLines.push(`${startTime} --> ${endTime}`);
+                            srtLines.push(text);
+                            srtLines.push('');
+                            
+                            counter++;
+                        }
+                    }
+                }
+                
+                return srtLines.join('\n');
+            }
+            
+            // 格式化时间函数
+            function formatTime(minutes, seconds, milliseconds) {
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                
+                // 格式化为两位数
+                const hh = hours.toString().padStart(2, '0');
+                const mm = mins.toString().padStart(2, '0');
+                const ss = seconds.toString().padStart(2, '0');
+                const ms = milliseconds.toString().padStart(2, '0').padEnd(3, '0');
+                
+                return `${hh}:${mm}:${ss},${ms}`;
+            }
+            
+            // 转换按钮事件
+            convertBtn.addEventListener('click', function() {
+                const lrcText = lrcInput.value.trim();
+                
+                if (!lrcText) {
+                    alert('请输入LRC字幕内容');
+                    return;
+                }
+                
+                const srtText = lrcToSrt(lrcText);
+                srtOutput.value = srtText;
+                preview.textContent = srtText;
+            });
+            
+            // 复制按钮事件
+            copyBtn.addEventListener('click', function() {
+                if (!srtOutput.value) {
+                    alert('没有内容可复制');
+                    return;
+                }
+                
+                srtOutput.select();
+                document.execCommand('copy');
+                alert('已复制到剪贴板');
+            });
+            
+            // 下载按钮事件
+            downloadBtn.addEventListener('click', function() {
+                if (!srtOutput.value) {
+                    alert('没有内容可下载');
+                    return;
+                }
+                
+                const blob = new Blob([srtOutput.value], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'converted_subtitle.srt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+            
+            // 清空输入按钮事件
+            clearInputBtn.addEventListener('click', function() {
+                lrcInput.value = '';
+            });
+            
+            // 清空输出按钮事件
+            clearOutputBtn.addEventListener('click', function() {
+                srtOutput.value = '';
+                preview.textContent = '转换后的字幕将在这里预览...';
+            });
+            
+            // 示例按钮事件
+            exampleBtn.addEventListener('click', function() {
+                lrcInput.value = `[00:01.00]这是第一句歌词
+[00:05.50]这是第二句歌词
+[00:10.20]这是第三句歌词
+[00:15.80]这是第四句歌词
+[00:20.30]这是第五句歌词
+[00:25.10]这是第六句歌词
+[00:30.40]这是第七句歌词
+[00:35.70]这是第八句歌词`;
+            });
+            
+            // 文件上传事件
+            lrcFileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    lrcInput.value = e.target.result;
+                };
+                reader.readAsText(file);
+            });
+        });
+    </script>
 </body>
 </html>
