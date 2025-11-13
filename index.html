@@ -1,405 +1,203 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>字幕工具箱 - LRC转SRT</title>
-    <style>
-        :root {
-            --primary-color: #3498db;
-            --secondary-color: #2980b9;
-            --background-color: #f8f9fa;
-            --card-color: #ffffff;
-            --text-color: #333333;
-            --border-color: #e0e0e0;
-            --success-color: #2ecc71;
-            --error-color: #e74c3c;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background-color: var(--background-color);
-            color: var(--text-color);
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 20px 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-        
-        h1 {
-            color: var(--primary-color);
-            margin-bottom: 10px;
-        }
-        
-        .subtitle {
-            color: #666;
-            font-size: 1.1rem;
-        }
-        
-        .main-content {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 30px;
-        }
-        
-        .input-section, .output-section {
-            flex: 1;
-            min-width: 300px;
-            background-color: var(--card-color);
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 25px;
-        }
-        
-        .section-title {
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--primary-color);
-        }
-        
-        textarea {
-            width: 100%;
-            height: 300px;
-            padding: 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            resize: vertical;
-            font-family: monospace;
-            font-size: 14px;
-        }
-        
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-        
-        button {
-            padding: 10px 20px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            font-size: 16px;
-        }
-        
-        button:hover {
-            background-color: var(--secondary-color);
-        }
-        
-        button.secondary {
-            background-color: #95a5a6;
-        }
-        
-        button.secondary:hover {
-            background-color: #7f8c8d;
-        }
-        
-        .file-input {
-            margin-bottom: 20px;
-        }
-        
-        .file-input label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-        
-        .preview-section {
-            margin-top: 30px;
-        }
-        
-        .preview-title {
-            margin-bottom: 10px;
-            font-weight: 500;
-        }
-        
-        .preview-content {
-            background-color: #f5f5f5;
-            padding: 15px;
-            border-radius: 4px;
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 14px;
-            white-space: pre-wrap;
-        }
-        
-        .instructions {
-            margin-top: 40px;
-            background-color: var(--card-color);
-            border-radius: 8px;
-            padding: 25px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        .instructions h2 {
-            margin-bottom: 15px;
-            color: var(--primary-color);
-        }
-        
-        .instructions ol {
-            padding-left: 20px;
-        }
-        
-        .instructions li {
-            margin-bottom: 10px;
-        }
-        
-        footer {
-            text-align: center;
-            margin-top: 50px;
-            padding: 20px 0;
-            color: #666;
-            border-top: 1px solid var(--border-color);
-        }
-        
-        @media (max-width: 768px) {
-            .main-content {
-                flex-direction: column;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LRC转SRT工具</title>
+<style>
+body {
+    font-family: sans-serif;
+    background: #f4f4f9;
+    padding: 20px;
+    color: #333;
+}
+h1 {
+    text-align: center;
+    color: #2c3e50;
+}
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+textarea {
+    width: 100%;
+    height: 200px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-family: monospace;
+    font-size: 14px;
+    resize: vertical;
+}
+button {
+    padding: 10px 20px;
+    margin: 8px 5px 0 0;
+    border: none;
+    border-radius: 4px;
+    background: #3498db;
+    color: white;
+    cursor: pointer;
+}
+button:hover {
+    background: #2980b9;
+}
+button.secondary {
+    background: #7f8c8d;
+}
+button.secondary:hover {
+    background: #707b7c;
+}
+.stats {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 5px;
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>字幕工具箱</h1>
-            <p class="subtitle">LRC转SRT及其他字幕格式转换工具</p>
-        </header>
-        
-        <div class="main-content">
-            <div class="input-section">
-                <h2 class="section-title">输入 (LRC格式)</h2>
-                <div class="file-input">
-                    <label for="lrc-file">上传LRC文件：</label>
-                    <input type="file" id="lrc-file" accept=".lrc">
-                </div>
-                <textarea id="lrc-input" placeholder="粘贴LRC字幕内容或上传文件...">[00:01.00]这是第一句歌词
-[00:05.50]这是第二句歌词
-[00:10.20]这是第三句歌词
-[00:15.80]这是第四句歌词
-[00:20.30]这是第五句歌词</textarea>
-                <div class="button-group">
-                    <button id="convert-btn">转换为SRT</button>
-                    <button id="clear-input" class="secondary">清空输入</button>
-                    <button id="example-btn" class="secondary">加载示例</button>
-                </div>
-            </div>
-            
-            <div class="output-section">
-                <h2 class="section-title">输出 (SRT格式)</h2>
-                <textarea id="srt-output" placeholder="转换后的SRT字幕将显示在这里..." readonly></textarea>
-                <div class="button-group">
-                    <button id="copy-btn">复制到剪贴板</button>
-                    <button id="download-btn">下载SRT文件</button>
-                    <button id="clear-output" class="secondary">清空输出</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="preview-section">
-            <h3 class="preview-title">预览</h3>
-            <div id="preview" class="preview-content">转换后的字幕将在这里预览...</div>
-        </div>
-        
-        <div class="instructions">
-            <h2>使用说明</h2>
-            <ol>
-                <li>在左侧输入框中粘贴LRC格式的字幕内容，或通过"上传LRC文件"按钮上传文件</li>
-                <li>点击"转换为SRT"按钮，将LRC格式转换为SRT格式</li>
-                <li>转换后的SRT字幕将显示在右侧输出框中</li>
-                <li>您可以通过"复制到剪贴板"按钮复制结果，或通过"下载SRT文件"按钮下载</li>
-                <li>如需重新开始，可以使用"清空输入"和"清空输出"按钮</li>
-            </ol>
-            
-            <h2>格式说明</h2>
-            <p><strong>LRC格式</strong>：每行歌词前带有时间标签，格式为[mm:ss.xx]</p>
-            <p><strong>SRT格式</strong>：包含序号、时间轴和字幕文本，时间格式为hh:mm:ss,xxx</p>
-        </div>
-        
-        <footer>
-            <p>字幕工具箱 &copy; 2023 - 部署在GitHub Pages上</p>
-        </footer>
+<div class="container">
+    <h1>LRC → SRT 转换</h1>
+
+    <div>
+        <input type="file" id="lrc-file" accept=".lrc">
+        <button id="example-btn" class="secondary">加载示例</button>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 获取DOM元素
-            const lrcInput = document.getElementById('lrc-input');
-            const srtOutput = document.getElementById('srt-output');
-            const convertBtn = document.getElementById('convert-btn');
-            const copyBtn = document.getElementById('copy-btn');
-            const downloadBtn = document.getElementById('download-btn');
-            const clearInputBtn = document.getElementById('clear-input');
-            const clearOutputBtn = document.getElementById('clear-output');
-            const exampleBtn = document.getElementById('example-btn');
-            const lrcFileInput = document.getElementById('lrc-file');
-            const preview = document.getElementById('preview');
-            
-            // LRC转SRT函数
-            function lrcToSrt(lrcText) {
-                const lines = lrcText.split('\n');
-                const srtLines = [];
-                let counter = 1;
-                
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    
-                    // 匹配LRC时间标签 [mm:ss.xx]
-                    const timeMatch = line.match(/\[(\d+):(\d+)\.(\d+)\]/);
-                    
-                    if (timeMatch) {
-                        const minutes = parseInt(timeMatch[1]);
-                        const seconds = parseInt(timeMatch[2]);
-                        const milliseconds = parseInt(timeMatch[3]);
-                        
-                        // 计算开始时间 (hh:mm:ss,xxx)
-                        const startTime = formatTime(minutes, seconds, milliseconds);
-                        
-                        // 计算结束时间 (假设每句持续5秒)
-                        let endMinutes = minutes;
-                        let endSeconds = seconds + 5;
-                        let endMilliseconds = milliseconds;
-                        
-                        if (endSeconds >= 60) {
-                            endMinutes += Math.floor(endSeconds / 60);
-                            endSeconds = endSeconds % 60;
-                        }
-                        
-                        const endTime = formatTime(endMinutes, endSeconds, endMilliseconds);
-                        
-                        // 提取歌词文本
-                        const text = line.replace(timeMatch[0], '').trim();
-                        
-                        if (text) {
-                            // 构建SRT格式
-                            srtLines.push(counter.toString());
-                            srtLines.push(`${startTime} --> ${endTime}`);
-                            srtLines.push(text);
-                            srtLines.push('');
-                            
-                            counter++;
-                        }
-                    }
-                }
-                
-                return srtLines.join('\n');
+    <h3>输入区 (LRC格式)</h3>
+    <textarea id="lrc-input" placeholder="粘贴LRC内容或上传文件..."></textarea>
+    <div class="stats" id="lrc-stats"></div>
+    <button id="convert-btn">转换为SRT</button>
+    <button id="clear-input" class="secondary">清空</button>
+
+    <h3>输出区 (SRT格式)</h3>
+    <textarea id="srt-output" placeholder="转换结果将显示在此处..." readonly></textarea>
+    <div class="stats" id="srt-stats"></div>
+    <button id="copy-btn">复制结果</button>
+    <button id="download-btn">下载SRT</button>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const lrcInput = document.getElementById('lrc-input');
+    const srtOutput = document.getElementById('srt-output');
+    const lrcFileInput = document.getElementById('lrc-file');
+    const convertBtn = document.getElementById('convert-btn');
+    const clearBtn = document.getElementById('clear-input');
+    const exampleBtn = document.getElementById('example-btn');
+    const copyBtn = document.getElementById('copy-btn');
+    const downloadBtn = document.getElementById('download-btn');
+    const lrcStats = document.getElementById('lrc-stats');
+    const srtStats = document.getElementById('srt-stats');
+
+    let originalFilename = 'converted';
+
+    function updateStats() {
+        lrcStats.textContent = `行数：${lrcInput.value.split('\n').length} | 字符：${lrcInput.value.length}`;
+        srtStats.textContent = `行数：${srtOutput.value.split('\n').length} | 字符：${srtOutput.value.length}`;
+    }
+
+    lrcInput.addEventListener('input', updateStats);
+
+    lrcFileInput.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        originalFilename = file.name.replace(/\.lrc$/i, '');
+        const reader = new FileReader();
+        reader.onload = e => {
+            lrcInput.value = e.target.result;
+            updateStats();
+        };
+        reader.readAsText(file, 'utf-8');
+    });
+
+    exampleBtn.addEventListener('click', () => {
+        lrcInput.value = `[00:00.00]Hello World
+[00:05.00]This is an example line
+[00:10.00]Converted to SRT format`;
+        updateStats();
+    });
+
+    clearBtn.addEventListener('click', () => {
+        lrcInput.value = '';
+        srtOutput.value = '';
+        updateStats();
+    });
+
+    function lrcToSrt(lrcText) {
+        const lines = lrcText.split('\n');
+        const timeEntries = [];
+        const regex = /\[(\d+):(\d+)(?:\.(\d+))?\]/g;
+
+        lines.forEach(line => {
+            const matches = [...line.matchAll(regex)];
+            let text = line.replace(regex, '').trim();
+            if (!text) return;
+            for (const match of matches) {
+                const m = parseInt(match[1]);
+                const s = parseInt(match[2]);
+                const ms = match[3] ? parseInt(match[3].padEnd(3, '0')) : 0;
+                const total = m * 60 + s + ms / 1000;
+                timeEntries.push({ time: total, text });
             }
-            
-            // 格式化时间函数
-            function formatTime(minutes, seconds, milliseconds) {
-                const hours = Math.floor(minutes / 60);
-                const mins = minutes % 60;
-                
-                // 格式化为两位数
-                const hh = hours.toString().padStart(2, '0');
-                const mm = mins.toString().padStart(2, '0');
-                const ss = seconds.toString().padStart(2, '0');
-                const ms = milliseconds.toString().padStart(2, '0').padEnd(3, '0');
-                
-                return `${hh}:${mm}:${ss},${ms}`;
-            }
-            
-            // 转换按钮事件
-            convertBtn.addEventListener('click', function() {
-                const lrcText = lrcInput.value.trim();
-                
-                if (!lrcText) {
-                    alert('请输入LRC字幕内容');
-                    return;
-                }
-                
-                const srtText = lrcToSrt(lrcText);
-                srtOutput.value = srtText;
-                preview.textContent = srtText;
-            });
-            
-            // 复制按钮事件
-            copyBtn.addEventListener('click', function() {
-                if (!srtOutput.value) {
-                    alert('没有内容可复制');
-                    return;
-                }
-                
-                srtOutput.select();
-                document.execCommand('copy');
-                alert('已复制到剪贴板');
-            });
-            
-            // 下载按钮事件
-            downloadBtn.addEventListener('click', function() {
-                if (!srtOutput.value) {
-                    alert('没有内容可下载');
-                    return;
-                }
-                
-                const blob = new Blob([srtOutput.value], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'converted_subtitle.srt';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            });
-            
-            // 清空输入按钮事件
-            clearInputBtn.addEventListener('click', function() {
-                lrcInput.value = '';
-            });
-            
-            // 清空输出按钮事件
-            clearOutputBtn.addEventListener('click', function() {
-                srtOutput.value = '';
-                preview.textContent = '转换后的字幕将在这里预览...';
-            });
-            
-            // 示例按钮事件
-            exampleBtn.addEventListener('click', function() {
-                lrcInput.value = `[00:01.00]这是第一句歌词
-[00:05.50]这是第二句歌词
-[00:10.20]这是第三句歌词
-[00:15.80]这是第四句歌词
-[00:20.30]这是第五句歌词
-[00:25.10]这是第六句歌词
-[00:30.40]这是第七句歌词
-[00:35.70]这是第八句歌词`;
-            });
-            
-            // 文件上传事件
-            lrcFileInput.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    lrcInput.value = e.target.result;
-                };
-                reader.readAsText(file);
-            });
         });
-    </script>
+
+        timeEntries.sort((a, b) => a.time - b.time);
+        const srtLines = [];
+        timeEntries.forEach((entry, i) => {
+            const start = formatTime(entry.time);
+            const end = formatTime(
+                i < timeEntries.length - 1 ? timeEntries[i + 1].time : entry.time + 5
+            );
+            srtLines.push(`${i + 1}`);
+            srtLines.push(`${start} --> ${end}`);
+            srtLines.push(entry.text, '');
+        });
+        return srtLines.join('\n');
+    }
+
+    function formatTime(sec) {
+        const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+        const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+        const s = String(Math.floor(sec % 60)).padStart(2, '0');
+        const ms = String(Math.floor((sec * 1000) % 1000)).padStart(3, '0');
+        return `${h}:${m}:${s},${ms}`;
+    }
+
+    convertBtn.addEventListener('click', () => {
+        const lrcText = lrcInput.value.trim();
+        if (!lrcText) {
+            alert('请输入LRC内容');
+            return;
+        }
+        const srtText = lrcToSrt(lrcText);
+        srtOutput.value = srtText;
+        updateStats();
+    });
+
+    copyBtn.addEventListener('click', () => {
+        if (!srtOutput.value) return alert('没有可复制的内容');
+        srtOutput.select();
+        document.execCommand('copy');
+        alert('已复制到剪贴板');
+    });
+
+    downloadBtn.addEventListener('click', () => {
+        if (!srtOutput.value) return alert('没有内容可下载');
+        const blob = new Blob([srtOutput.value], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${originalFilename}.srt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    updateStats();
+});
+</script>
 </body>
 </html>
