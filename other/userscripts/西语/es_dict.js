@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         西班牙语词典整合版
+// @name         西语查询整合版
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  多词典查询，可切换标签页和可视化设置
