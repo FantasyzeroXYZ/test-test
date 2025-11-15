@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>我的漫画阅读器</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>漫画阅读器</h1>
+        <input type="file" id="comic-file" accept=".zip,.cbz" />
+        <input type="file" id="mokuro-file" accept=".mokuro" />
+    </header>
+    
+    <main>
+        <div id="comic-viewer"></div>
+        <div id="json-tooltip"></div>
+    </main>
+
+    <!-- 引入处理ZIP的库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <!-- 确保先加载类定义 -->
+    <script src="js/zip.js"></script>
+    <script src="js/mokuro.js"></script>
+    
+    <!-- 最后加载主应用 -->
+    <script src="js/app.js"></script>
+</body>
+</html>

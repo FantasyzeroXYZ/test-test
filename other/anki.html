@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anki APKG 模板管理器</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --danger-color: #e74c3c;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --light-bg: #f8f9fa;
+            --border-color: #dee2e6;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: var(--light-bg);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+        
+        h1 {
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+        
+        .description {
+            color: #666;
+            font-size: 1.1em;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+            background-color: #fafafa;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--primary-color);
+            background-color: #f0f7ff;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+        }
+        
+        .btn-success:hover {
+            background-color: #219653;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+        }
+        
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .status {
+            text-align: center;
+            margin: 10px 0;
+            min-height: 24px;
+        }
+        
+        .result {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #e8f5e9;
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .error {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #ffebee;
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        .file-info {
+            margin: 15px 0;
+            padding: 15px;
+            background-color: #f1f8e9;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+        
+        .instructions {
+            background-color: #fff8e1;
+            border-left: 4px solid var(--warning-color);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #e65100;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .templates-container {
+            display: none;
+            margin: 20px 0;
+        }
+        
+        .template-list {
+            margin: 15px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        
+        .template-item {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        
+        .template-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .template-item:last-child {
+            border-bottom: none;
+        }
+        
+        .template-checkbox {
+            margin-right: 15px;
+            transform: scale(1.2);
+        }
+        
+        .template-info {
+            flex-grow: 1;
+        }
+        
+        .template-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .template-details {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .template-preview {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85em;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .select-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .note-count {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Anki APKG 模板管理器</h1>
+            <p class="description">查看和管理 Anki 牌组中的模板，选择并删除不需要的模板以解决 MarginNote 导入问题</p>
+        </header>
+        
+        <div class="instructions">
+            <h3>使用说明</h3>
+            <ol>
+                <li>从 Anki 导出您的牌组文件 (.apkg)</li>
+                <li>点击下方区域或拖拽文件到此页面</li>
+                <li>查看所有模板并选择要删除的模板</li>
+                <li>下载清理后的文件并在 MarginNote 中使用</li>
+            </ol>
+        </div>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <h3>点击或拖拽 APKG 文件到这里</h3>
+            <p>支持 .apkg 文件格式</p>
+            <input type="file" id="fileInput" class="file-input" accept=".apkg">
+            <button class="btn" id="selectFileBtn">选择文件</button>
+        </div>
+        
+        <div class="file-info" id="fileInfo">
+            <strong>已选择文件:</strong> <span id="fileName"></span>
+            <br>
+            <strong>文件大小:</strong> <span id="fileSize"></span>
+        </div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress" id="progressBar"></div>
+            </div>
+            <div class="status" id="statusText">正在处理文件...</div>
+        </div>
+        
+        <div class="templates-container" id="templatesContainer">
+            <h2>模板管理</h2>
+            <p>选择您想要删除的模板。通常，只保留您实际使用的模板，删除自动生成的基础模板。</p>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalTemplates">0</div>
+                    <div class="stat-label">总模板数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="selectedTemplates">0</div>
+                    <div class="stat-label">已选择</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="remainingTemplates">0</div>
+                    <div class="stat-label">保留模板</div>
+                </div>
+            </div>
+            
+            <div class="select-actions">
+                <button class="btn" id="selectAllBtn">全选</button>
+                <button class="btn" id="selectNoneBtn">全不选</button>
+                <button class="btn" id="selectBasicBtn">选择基础模板</button>
+            </div>
+            
+            <div class="template-list" id="templateList">
+                <div class="empty-state" id="emptyState">
+                    没有找到模板或正在加载中...
+                </div>
+            </div>
+            
+            <div class="actions">
+                <button class="btn btn-danger" id="deleteSelectedBtn" disabled>删除选中的模板</button>
+                <button class="btn btn-success" id="downloadBtn" disabled>下载清理后的文件</button>
+            </div>
+        </div>
+        
+        <div class="result" id="result">
+            <h3>✅ 文件处理成功！</h3>
+            <p>您的 APKG 文件已成功清理。现在可以下载清理后的文件并在 MarginNote 中使用了。</p>
+            <button class="btn btn-success" id="finalDownloadBtn">下载清理后的文件</button>
+        </div>
+        
+        <div class="error" id="error">
+            <h3>❌ 处理过程中出现错误</h3>
+            <p id="errorMessage"></p>
+        </div>
+        
+        <footer>
+            <p>本工具完全在浏览器中运行，您的文件不会被上传到任何服务器</p>
+            <p>基于 GitHub Pages | 开源工具</p>
+        </footer>
+    </div>
+
+    <!-- 引入必要的库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    
+    <script>
+        // DOM 元素
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const selectFileBtn = document.getElementById('selectFileBtn');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const statusText = document.getElementById('statusText');
+        const templatesContainer = document.getElementById('templatesContainer');
+        const templateList = document.getElementById('templateList');
+        const emptyState = document.getElementById('emptyState');
+        const totalTemplates = document.getElementById('totalTemplates');
+        const selectedTemplates = document.getElementById('selectedTemplates');
+        const remainingTemplates = document.getElementById('remainingTemplates');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const selectNoneBtn = document.getElementById('selectNoneBtn');
+        const selectBasicBtn = document.getElementById('selectBasicBtn');
+        const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const result = document.getElementById('result');
+        const error = document.getElementById('error');
+        const errorMessage = document.getElementById('errorMessage');
+        const finalDownloadBtn = document.getElementById('finalDownloadBtn');
+        
+        // 全局变量
+        let originalApkgData = null;
+        let cleanedApkgData = null;
+        let originalFileName = '';
+        let templates = [];
+        let selectedTemplateIds = new Set();
+        let SQL = null;
+        let zip = null;
+        let dbFile = null;
+        
+        // 事件监听器
+        selectFileBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('dragleave', handleDragLeave);
+        uploadArea.addEventListener('drop', handleFileDrop);
+        selectAllBtn.addEventListener('click', selectAllTemplates);
+        selectNoneBtn.addEventListener('click', selectNoneTemplates);
+        selectBasicBtn.addEventListener('click', selectBasicTemplates);
+        deleteSelectedBtn.addEventListener('click', deleteSelectedTemplates);
+        downloadBtn.addEventListener('click', processAndDownload);
+        finalDownloadBtn.addEventListener('click', downloadCleanedFile);
+        
+        // 初始化SQL.js
+        initSQL();
+        
+        // 初始化SQL.js
+        function initSQL() {
+            // SQL.js 已经在script标签中引入，直接使用
+            if (typeof window.initSqlJs !== 'undefined') {
+                const config = {
+                    locateFile: filename => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${filename}`
+                };
+                
+                window.initSqlJs(config).then(function(sql) {
+                    SQL = sql;
+                    console.log("SQL.js 初始化成功");
+                }).catch(function(err) {
+                    console.error("SQL.js 初始化失败:", err);
+                    showError("SQL.js 初始化失败: " + err.message);
+                });
+            } else {
+                console.error("SQL.js 未正确加载");
+                showError("SQL.js 库未正确加载，请刷新页面重试");
+            }
+        }
+        
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+        
+        // 处理拖放
+        function handleDragOver(event) {
+            event.preventDefault();
+            uploadArea.classList.add('dragover');
+        }
+        
+        function handleDragLeave(event) {
+            event.preventDefault();
+            uploadArea.classList.remove('dragover');
+        }
+        
+        function handleFileDrop(event) {
+            event.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const file = event.dataTransfer.files[0];
+            if (file && file.name.endsWith('.apkg')) {
+                processFile(file);
+            } else {
+                showError('请选择有效的 .apkg 文件');
+            }
+        }
+        
+        // 处理文件
+        function processFile(file) {
+            // 重置UI
+            resetUI();
+            
+            // 显示文件信息
+            originalFileName = file.name;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.style.display = 'block';
+            
+            // 显示进度条
+            progressContainer.style.display = 'block';
+            updateProgress(10, '正在读取文件...');
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                originalApkgData = e.target.result;
+                updateProgress(30, '正在解析 APKG 文件...');
+                
+                try {
+                    // 解析 APKG 文件 (实际上是 ZIP 格式)
+                    JSZip.loadAsync(originalApkgData).then(function(zipData) {
+                        zip = zipData;
+                        updateProgress(50, '正在分析模板数据...');
+                        
+                        // 查找数据库文件
+                        dbFile = findDatabaseFile(zip);
+                        if (!dbFile) {
+                            throw new Error('无法找到Anki数据库文件');
+                        }
+                        
+                        return dbFile.async('uint8array').then(function(data) {
+                            updateProgress(70, '正在提取模板信息...');
+                            return extractTemplates(data);
+                        });
+                    }).then(function(extractedTemplates) {
+                        updateProgress(90, '正在渲染模板列表...');
+                        
+                        // 保存模板数据
+                        templates = extractedTemplates;
+                        
+                        // 渲染模板列表
+                        renderTemplatesList();
+                        
+                        // 更新统计信息
+                        updateStats();
+                        
+                        // 显示模板管理界面
+                        setTimeout(() => {
+                            progressContainer.style.display = 'none';
+                            templatesContainer.style.display = 'block';
+                            updateProgress(100, '完成');
+                        }, 500);
+                    }).catch(function(err) {
+                        showError('处理文件时出错: ' + err.message);
+                    });
+                } catch (err) {
+                    showError('解析文件时出错: ' + err.message);
+                }
+            };
+            
+            reader.onerror = function() {
+                showError('读取文件失败');
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+        
+        // 查找数据库文件
+        function findDatabaseFile(zip) {
+            const possibleNames = [
+                'collection.anki2', 'collection.anki21', 'collection',
+                'anki21', 'anki2'
+            ];
+            
+            for (const name of possibleNames) {
+                if (zip.file(name)) {
+                    console.log('找到数据库文件:', name);
+                    return zip.file(name);
+                }
+            }
+            
+            // 查找任何可能的数据库文件
+            for (const fileName in zip.files) {
+                if (fileName.match(/\.(anki2|anki21)$/) || fileName === 'collection') {
+                    console.log('找到可能的数据库文件:', fileName);
+                    return zip.files[fileName];
+                }
+            }
+            
+            return null;
+        }
+        
+        // 提取模板信息
+        function extractTemplates(data) {
+            return new Promise((resolve, reject) => {
+                if (!SQL) {
+                    reject(new Error('SQL.js 未初始化'));
+                    return;
+                }
+                
+                try {
+                    // 加载SQLite数据库
+                    const db = new SQL.Database(data);
+                    
+                    // 查询模板数据
+                    // Anki数据库结构可能因版本而异，这里尝试几种可能的查询
+                    let modelsData = null;
+                    
+                    try {
+                        // 尝试从col表中获取models字段
+                        const result = db.exec("SELECT models FROM col LIMIT 1");
+                        if (result.length > 0 && result[0].values.length > 0) {
+                            modelsData = JSON.parse(result[0].values[0][0]);
+                        }
+                    } catch (e) {
+                        console.warn("无法从col表获取models数据:", e);
+                    }
+                    
+                    // 如果无法从col表获取，尝试其他方式
+                    if (!modelsData) {
+                        try {
+                            // 尝试直接查询notes表获取模板信息
+                            const result = db.exec("SELECT DISTINCT mid FROM notes");
+                            if (result.length > 0) {
+                                modelsData = {};
+                                result[0].values.forEach(row => {
+                                    const mid = row[0];
+                                    modelsData[mid] = {
+                                        name: `模板 ${mid}`,
+                                        id: mid,
+                                        fields: [],
+                                        tmpls: [{ name: "卡片" }],
+                                        isBasic: true
+                                    };
+                                });
+                            }
+                        } catch (e) {
+                            console.warn("无法从notes表获取模板数据:", e);
+                        }
+                    }
+                    
+                    if (!modelsData) {
+                        reject(new Error('无法从数据库中提取模板信息'));
+                        return;
+                    }
+                    
+                    // 转换为模板数组
+                    const templates = [];
+                    for (const [id, model] of Object.entries(modelsData)) {
+                        const template = {
+                            id: id,
+                            name: model.name || `模板 ${id}`,
+                            type: model.type || '标准',
+                            fields: model.flds ? model.flds.map(f => f.name) : ['字段1', '字段2'],
+                            cards: 0, // 需要计算实际卡片数
+                            preview: '',
+                            isBasic: model.name ? model.name.toLowerCase().includes('basic') || 
+                                                  model.name.toLowerCase().includes('基础') : true
+                        };
+                        
+                        // 如果有模板定义，生成预览
+                        if (model.tmpls && model.tmpls.length > 0) {
+                            template.preview = model.tmpls.map(t => 
+                                `卡片: ${t.name}\n问题: ${t.qfmt || '{{正面}}'}\n答案: ${t.afmt || '{{背面}}'}`
+                            ).join('\n---\n');
+                        } else {
+                            template.preview = "{{正面}}\n---\n{{背面}}";
+                        }
+                        
+                        // 计算使用此模板的卡片数量
+                        try {
+                            const cardResult = db.exec(`SELECT COUNT(*) FROM cards WHERE nid IN (SELECT id FROM notes WHERE mid = ${id})`);
+                            if (cardResult.length > 0 && cardResult[0].values.length > 0) {
+                                template.cards = cardResult[0].values[0][0];
+                            }
+                        } catch (e) {
+                            console.warn(`无法计算模板 ${id} 的卡片数量:`, e);
+                        }
+                        
+                        templates.push(template);
+                    }
+                    
+                    db.close();
+                    console.log(`从数据库中提取了 ${templates.length} 个模板`);
+                    resolve(templates);
+                } catch (err) {
+                    reject(new Error('解析数据库时出错: ' + err.message));
+                }
+            });
+        }
+        
+        // 渲染模板列表
+        function renderTemplatesList() {
+            if (templates.length === 0) {
+                emptyState.style.display = 'block';
+                templateList.innerHTML = '';
+                templateList.appendChild(emptyState);
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            templateList.innerHTML = '';
+            
+            templates.forEach(template => {
+                const templateItem = document.createElement('div');
+                templateItem.className = 'template-item';
+                templateItem.dataset.id = template.id;
+                
+                const isChecked = selectedTemplateIds.has(template.id);
+                
+                templateItem.innerHTML = `
+                    <input type="checkbox" class="template-checkbox" id="template-${template.id}" 
+                           ${isChecked ? 'checked' : ''}>
+                    <div class="template-info">
+                        <div class="template-name">${template.name} 
+                            ${template.isBasic ? '<span style="color: #e74c3c; font-size: 0.8em;">[基础模板]</span>' : ''}
+                            <span class="note-count">(${template.cards} 张卡片)</span>
+                        </div>
+                        <div class="template-details">
+                            类型: ${template.type} | 字段: ${template.fields.join(', ')}
+                        </div>
+                        <div class="template-preview">${template.preview}</div>
+                    </div>
+                `;
+                
+                templateList.appendChild(templateItem);
+                
+                // 添加复选框事件监听
+                const checkbox = templateItem.querySelector('.template-checkbox');
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        selectedTemplateIds.add(template.id);
+                    } else {
+                        selectedTemplateIds.delete(template.id);
+                    }
+                    updateStats();
+                    updateDeleteButtonState();
+                });
+            });
+        }
+        
+        // 更新统计信息
+        function updateStats() {
+            totalTemplates.textContent = templates.length;
+            selectedTemplates.textContent = selectedTemplateIds.size;
+            remainingTemplates.textContent = templates.length - selectedTemplateIds.size;
+        }
+        
+        // 更新删除按钮状态
+        function updateDeleteButtonState() {
+            deleteSelectedBtn.disabled = selectedTemplateIds.size === 0;
+            downloadBtn.disabled = selectedTemplateIds.size === 0;
+        }
+        
+        // 选择所有模板
+        function selectAllTemplates() {
+            selectedTemplateIds.clear();
+            templates.forEach(template => {
+                selectedTemplateIds.add(template.id);
+            });
+            renderTemplatesList();
+            updateStats();
+            updateDeleteButtonState();
+        }
+        
+        // 取消选择所有模板
+        function selectNoneTemplates() {
+            selectedTemplateIds.clear();
+            renderTemplatesList();
+            updateStats();
+            updateDeleteButtonState();
+        }
+        
+        // 选择基础模板
+        function selectBasicTemplates() {
+            selectedTemplateIds.clear();
+            templates.forEach(template => {
+                if (template.isBasic) {
+                    selectedTemplateIds.add(template.id);
+                }
+            });
+            renderTemplatesList();
+            updateStats();
+            updateDeleteButtonState();
+        }
+        
+        // 删除选中的模板
+        function deleteSelectedTemplates() {
+            if (selectedTemplateIds.size === 0) {
+                alert('请先选择要删除的模板');
+                return;
+            }
+            
+            if (!confirm(`确定要删除 ${selectedTemplateIds.size} 个模板吗？此操作将影响 ${getTotalCardsCount()} 张卡片，且不可撤销。`)) {
+                return;
+            }
+            
+            // 从显示中移除选中的模板
+            templates = templates.filter(template => !selectedTemplateIds.has(template.id));
+            selectedTemplateIds.clear();
+            
+            renderTemplatesList();
+            updateStats();
+            updateDeleteButtonState();
+            
+            alert(`成功标记了 ${selectedTemplateIds.size} 个模板用于删除`);
+        }
+        
+        // 获取选中模板的卡片总数
+        function getTotalCardsCount() {
+            let total = 0;
+            templates.forEach(template => {
+                if (selectedTemplateIds.has(template.id)) {
+                    total += template.cards;
+                }
+            });
+            return total;
+        }
+        
+        // 处理并下载文件
+        function processAndDownload() {
+            if (selectedTemplateIds.size === 0) {
+                alert('请先选择要删除的模板');
+                return;
+            }
+            
+            progressContainer.style.display = 'block';
+            updateProgress(10, '开始处理文件...');
+            
+            // 实际处理APKG文件
+            processAPKGFile().then(() => {
+                updateProgress(100, '处理完成！');
+                
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    templatesContainer.style.display = 'none';
+                    result.style.display = 'block';
+                }, 500);
+            }).catch(err => {
+                showError('处理文件时出错: ' + err.message);
+            });
+        }
+        
+        // 实际处理APKG文件
+        function processAPKGFile() {
+            return new Promise((resolve, reject) => {
+                try {
+                    updateProgress(30, '正在删除选中的模板...');
+                    
+                    // 获取数据库文件数据
+                    dbFile.async('uint8array').then(data => {
+                        // 使用SQL.js修改数据库
+                        const db = new SQL.Database(data);
+                        
+                        // 删除选中的模板
+                        selectedTemplateIds.forEach(templateId => {
+                            try {
+                                // 从col表的models字段中删除模板
+                                const result = db.exec("SELECT models FROM col LIMIT 1");
+                                if (result.length > 0 && result[0].values.length > 0) {
+                                    let modelsData = JSON.parse(result[0].values[0][0]);
+                                    
+                                    // 删除指定的模板
+                                    if (modelsData[templateId]) {
+                                        delete modelsData[templateId];
+                                        
+                                        // 更新数据库
+                                        const updatedModels = JSON.stringify(modelsData);
+                                        db.run("UPDATE col SET models = ?", [updatedModels]);
+                                        
+                                        console.log(`已删除模板: ${templateId}`);
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn(`删除模板 ${templateId} 时出错:`, e);
+                            }
+                        });
+                        
+                        // 获取修改后的数据库数据
+                        const updatedData = db.export();
+                        db.close();
+                        
+                        updateProgress(70, '正在重新打包文件...');
+                        
+                        // 用修改后的数据替换原数据库文件
+                        zip.file(dbFile.name, updatedData);
+                        
+                        // 生成新的APKG文件
+                        zip.generateAsync({
+                            type: 'uint8array',
+                            compression: 'DEFLATE'
+                        }).then(function(content) {
+                            cleanedApkgData = content;
+                            updateProgress(90, '正在生成文件...');
+                            resolve();
+                        }).catch(reject);
+                    }).catch(reject);
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        }
+        
+        // 下载清理后的文件
+        function downloadCleanedFile() {
+            if (cleanedApkgData) {
+                const blob = new Blob([cleanedApkgData], { type: 'application/octet-stream' });
+                const cleanedFileName = originalFileName.replace('.apkg', '_cleaned.apkg');
+                saveAs(blob, cleanedFileName);
+            }
+        }
+        
+        // 更新进度条
+        function updateProgress(percent, message) {
+            progressBar.style.width = percent + '%';
+            statusText.textContent = message;
+        }
+        
+        // 显示错误
+        function showError(message) {
+            errorMessage.textContent = message;
+            error.style.display = 'block';
+            progressContainer.style.display = 'none';
+        }
+        
+        // 重置UI
+        function resetUI() {
+            fileInfo.style.display = 'none';
+            progressContainer.style.display = 'none';
+            templatesContainer.style.display = 'none';
+            result.style.display = 'none';
+            error.style.display = 'none';
+            selectedTemplateIds.clear();
+            templates = [];
+            zip = null;
+            dbFile = null;
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>
